@@ -1,3 +1,7 @@
+"""
+hand_train.py에서 만들어 훈련시킨 모델의 정상작동을 테스트하는 코드
+"""
+
 import cv2
 import mediapipe as mp
 import numpy as np
