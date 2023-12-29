@@ -1,3 +1,7 @@
+"""
+Dataset 만드는 코드
+"""
+
 import cv2
 import mediapipe as mp
 import numpy as np
