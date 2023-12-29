@@ -1,3 +1,7 @@
+"""
+hand.py에서 만든 데이터세트를 가지고 모델을 만들어서 훈련시킨다.
+"""
+
 import numpy as np
 import os
 from tensorflow.keras.utils import to_categorical
