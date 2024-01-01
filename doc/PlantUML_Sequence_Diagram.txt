@@ -26,19 +26,21 @@ ctrl -> gesture: Process gesture recognition
 gesture -> gesture: Check for hand gesture
 alt Gesture unknown
     gesture -> gesture: Blur as default
+    gesture -> ctrl: Return processed video feed
 else Gesture recognized
     gesture -> gesture: Remove blur
+    gesture -> ctrl: Return processed video feed
 else Gesture recognized (emotional emoji)
-    gesture -> emotion: Process emotion recognition
+    gesture -> ctrl: Request emotion recognition
+    ctrl -> emotion: Process emotion recognition
     emotion -> emotion: Check for facial emotion
     alt Emotion recognized
         emotion -> emotion: Use emotional emoji
     else Emotion unknown
         emotion -> emotion: Use default emoji
     end
-    emotion -> gesture: Return processed video feed
+    emotion -> ctrl: Return processed video feed
 end
-gesture -> ctrl: Return processed video feed
 ctrl -> edge: Return video feed
 edge -> per: Show processed video
 
