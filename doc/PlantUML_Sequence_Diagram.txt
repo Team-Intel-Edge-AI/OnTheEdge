@@ -1,0 +1,45 @@
+@startuml
+title Project: Face Privacy
+
+actor Person as per
+boundary Edge_Device as edge
+control Control as ctrl
+participant Face_Recognition_AI as face
+participant Gesture_Recognition_AI as gesture
+participant Emotion_Recognition_AI as emotion
+
+skinparam sequenceMessageAlign center
+
+per -> edge: Use device
+edge -> ctrl: Send video feed
+ctrl -> face: Request facial recognition
+face -> face: Check for face
+
+alt Face recognized (registered user)
+    face -> ctrl: Remove blur
+else Face unknown (bystander)
+    face -> ctrl: Blur as default
+end
+
+ctrl -> gesture: Request gesture recognition
+gesture -> gesture: Check for hand gesture
+
+alt Gesture unknown
+    gesture -> ctrl: Blur as default
+else Gesture recognized (remove blur)
+    gesture -> ctrl: Remove blur
+else Gesture recognized (emotional emoji)
+    gesture -> ctrl: Detect facial emotions
+    ctrl -> emotion: Request emotion recognition
+    emotion -> emotion: Check for facial emotion
+    alt Emotion recognized
+        emotion -> ctrl: Use emotional emoji
+    else Emotion unknown
+        emotion -> ctrl: Use default emoji
+    end
+end
+
+ctrl -> edge: Process video
+edge -> per: Show video feed
+
+@enduml
