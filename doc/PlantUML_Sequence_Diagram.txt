@@ -1,0 +1,46 @@
+@startuml
+title Project: Face Privacy
+
+actor Person as per
+boundary Edge_Device as edge
+control Control as ctrl
+participant Face_Recognition_Model as face
+participant Gesture_Recognition_Model as gesture
+participant Emotion_Recognition_Model as emotion
+
+skinparam sequenceMessageAlign center
+
+per -> edge: Use device
+edge -> ctrl: Send video feed
+
+ctrl -> face: Process facial recognition
+face -> face: Check for face
+alt Face recognized
+    face -> face: Remove blur
+else Face unknown
+    face -> face: Blur as default
+end
+face -> ctrl: Return processed video feed
+
+ctrl -> gesture: Process gesture recognition
+gesture -> gesture: Check for hand gesture
+alt Gesture unknown (no change)
+    gesture -> ctrl: Return processed video feed
+else Gesture recognized (unblur)
+    gesture -> face: Request blur removal
+    face -> face: Remove blur
+    face -> ctrl: Return processed video feed
+else Gesture recognized (emotional emoji)
+    gesture -> emotion: Request emotion recognition
+    emotion -> emotion: Check for facial emotion
+    alt Emotion recognized
+        emotion -> emotion: Use emotional emoji
+    else Emotion unknown
+        emotion -> emotion: Use default emoji
+    end
+    emotion -> ctrl: Return processed video feed
+end
+ctrl -> edge: Return video feed
+edge -> per: Show processed video
+
+@enduml
