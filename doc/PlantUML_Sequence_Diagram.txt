@@ -4,42 +4,42 @@ title Project: Face Privacy
 actor Person as per
 boundary Edge_Device as edge
 control Control as ctrl
-participant Face_Recognition_AI as face
-participant Gesture_Recognition_AI as gesture
-participant Emotion_Recognition_AI as emotion
+participant Face_Recognition_Model as face
+participant Gesture_Recognition_Model as gesture
+participant Emotion_Recognition_Model as emotion
 
 skinparam sequenceMessageAlign center
 
 per -> edge: Use device
 edge -> ctrl: Send video feed
-ctrl -> face: Request facial recognition
+
+ctrl -> face: Process facial recognition
 face -> face: Check for face
-
-alt Face recognized (registered user)
-    face -> ctrl: Remove blur
-else Face unknown (bystander)
-    face -> ctrl: Blur as default
+alt Face recognized
+    face -> face: Remove blur
+else Face unknown
+    face -> face: Blur as default
 end
+face -> ctrl: Return processed video feed
 
-ctrl -> gesture: Request gesture recognition
+ctrl -> gesture: Process gesture recognition
 gesture -> gesture: Check for hand gesture
-
 alt Gesture unknown
-    gesture -> ctrl: Blur as default
-else Gesture recognized (remove blur)
-    gesture -> ctrl: Remove blur
+    gesture -> gesture: Blur as default
+else Gesture recognized
+    gesture -> gesture: Remove blur
 else Gesture recognized (emotional emoji)
-    gesture -> ctrl: Detect facial emotions
-    ctrl -> emotion: Request emotion recognition
+    gesture -> emotion: Process emotion recognition
     emotion -> emotion: Check for facial emotion
     alt Emotion recognized
-        emotion -> ctrl: Use emotional emoji
+        emotion -> emotion: Use emotional emoji
     else Emotion unknown
-        emotion -> ctrl: Use default emoji
+        emotion -> emotion: Use default emoji
     end
+    emotion -> gesture: Return processed video feed
 end
-
-ctrl -> edge: Process video
-edge -> per: Show video feed
+gesture -> ctrl: Return processed video feed
+ctrl -> edge: Return video feed
+edge -> per: Show processed video
 
 @enduml
