@@ -1,0 +1,58 @@
+@startuml
+title Project: Face Privacy
+
+class Edge_Device {
+    input: InputStream
+    output: OutputStream
+    process(input)
+    display(output)
+}
+
+class Controller {
+    input: InputStream
+    output: OutputStream
+    model: CommonModel_interface
+    face_model: FaceRecognitionModel
+    gesture_model: GestureRecognitionModel
+    emotion_model: EmotionRecognitionModel
+    ask_model(input, output, model)
+    ask_emotion_model(output)
+    display_images(output)
+}
+
+interface CommonModel {
+    process(input, output, command)
+}
+
+class FaceRecognitionModel {
+    process(input, output, command)
+}
+
+class GestureRecognitionModel {
+    process(input, output, command)
+}
+
+class EmotionRecognitionModel {
+    process(input, output, command)
+}
+
+class InputStream {}
+
+class OutputStream {}
+
+class Command {}
+
+CommonModel <|-- FaceRecognitionModel
+CommonModel <|-- GestureRecognitionModel
+CommonModel <|-- EmotionRecognitionModel
+Edge_Device *-- InputStream
+Edge_Device *-- OutputStream
+Controller *-- InputStream
+Controller *-- OutputStream
+Controller *-- CommonModel: > Contains
+FaceRecognitionModel -- Command: > Uses
+GestureRecognitionModel -- Command: > Uses
+EmotionRecognitionModel -- Command: > Uses
+Edge_Device -- Controller: Passes data
+
+@enduml
