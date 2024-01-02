@@ -34,7 +34,6 @@ data = np.concatenate([
     np.load('dataset/seq_Blur3_1703833437.npy'),
     np.load('dataset/seq_emoticon_ON_1703833437.npy'),
     np.load('dataset/seq_emoticon_OFF_1703833437.npy')
-    
 ], axis=0)
 
 data.shape
@@ -109,5 +108,3 @@ model = load_model('models/model.h5')
 y_pred = model.predict(x_val)
 
 multilabel_confusion_matrix(np.argmax(y_val, axis=1), np.argmax(y_pred, axis=1))
-
-

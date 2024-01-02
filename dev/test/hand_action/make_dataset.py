@@ -15,9 +15,9 @@ secs_for_action = 30
 mp_hands = mp.solutions.hands
 mp_drawing = mp.solutions.drawing_utils
 hands = mp_hands.Hands( #손인식을 위한 객체 생성
-    max_num_hands=4,
-    min_detection_confidence=0.5,
-    min_tracking_confidence=0.5)
+max_num_hands=4,
+min_detection_confidence=0.5,
+min_tracking_confidence=0.5)
 
 cap = cv2.VideoCapture(0) #비디어 캡쳐 객체를 생성하고 연결을 확인
 
@@ -94,5 +94,3 @@ while cap.isOpened(): #연결확인
         print(action, full_seq_data.shape)
         np.save(os.path.join('dataset', f'seq_{action}_{created_time}'), full_seq_data)
     break
-
-    

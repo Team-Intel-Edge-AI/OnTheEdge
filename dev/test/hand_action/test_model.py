@@ -16,9 +16,9 @@ model = load_model('models/model.h5')
 mp_hands = mp.solutions.hands
 mp_drawing = mp.solutions.drawing_utils
 hands = mp_hands.Hands(
-    max_num_hands=10,
-    min_detection_confidence=0.5,
-    min_tracking_confidence=0.5)
+max_num_hands=10,
+min_detection_confidence=0.5,
+min_tracking_confidence=0.5)
 
 cap = cv2.VideoCapture(0)
 
@@ -96,4 +96,3 @@ while cap.isOpened():
     cv2.imshow('img', img)
     if cv2.waitKey(1) == ord('q'):
         break
-
