@@ -13,6 +13,8 @@ skinparam sequenceMessageAlign center
 per -> edge: Use device
 edge -> ctrl: Send video feed
 
+group Remote server
+|||
 par Facial Recognition
     ctrl -> face: Process facial recognition
     face -> face: Check for face
@@ -41,6 +43,8 @@ else Gesture/Emotion Recognition
         end
         emotion -> ctrl: Return processed video feed
     end
+end
+|||
 end
 
 ctrl -> edge: Return video feed
