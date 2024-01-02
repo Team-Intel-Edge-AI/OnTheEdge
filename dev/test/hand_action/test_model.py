@@ -7,7 +7,7 @@ import mediapipe as mp
 import numpy as np
 from tensorflow.keras.models import load_model
 
-actions = ['open', 'stop']
+actions = ['ON', 'OFF', 'Blur1', 'Blur2', 'Blur3', 'emoticon_ON', 'emoticon_OFF']
 seq_length = 30
 
 model = load_model('models/model.h5')
@@ -16,9 +16,9 @@ model = load_model('models/model.h5')
 mp_hands = mp.solutions.hands
 mp_drawing = mp.solutions.drawing_utils
 hands = mp_hands.Hands(
-    max_num_hands=1,
-    min_detection_confidence=0.5,
-    min_tracking_confidence=0.5)
+max_num_hands=10,
+min_detection_confidence=0.5,
+min_tracking_confidence=0.5)
 
 cap = cv2.VideoCapture(0)
 
