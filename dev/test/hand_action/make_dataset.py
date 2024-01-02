@@ -1,32 +1,36 @@
+"""
+Dataset 만드는 코드
+"""
+
 import cv2
 import mediapipe as mp
 import numpy as np
 import time, os
 
-actions = ['open', 'stop']
+actions = ['on', 'off', 'Blur1', 'Blur2', 'Blur3', 'emoticon_ON', 'emoticon_OFF']
 seq_length = 30
 secs_for_action = 30
 
-# MediaPipe hands model
+# MediaPipe hands model 미디어 파이브에서 가져올 기능들
 mp_hands = mp.solutions.hands
 mp_drawing = mp.solutions.drawing_utils
-hands = mp_hands.Hands(
+hands = mp_hands.Hands( #손인식을 위한 객체 생성
     max_num_hands=4,
     min_detection_confidence=0.5,
     min_tracking_confidence=0.5)
 
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture(0) #비디어 캡쳐 객체를 생성하고 연결을 확인
 
 created_time = int(time.time())
 os.makedirs('dataset', exist_ok=True)
 
-while cap.isOpened():
+while cap.isOpened(): #연결확인
     for idx, action in enumerate(actions):
         data = []
 
-        ret, img = cap.read()
+        ret, img = cap.read() #카메라 데이터 읽기
 
-        img = cv2.flip(img, 1)
+        img = cv2.flip(img, 1) #셀프 카메라처럼 좌우 반전 0보다 크면 좌우 반전/ 0보다 작으면 상하좌우 반전
 
         cv2.putText(img, f'Waiting for collecting {action.upper()} action...', org=(10, 30), fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=(255, 255, 255), thickness=2)
         cv2.imshow('img', img)
@@ -35,18 +39,20 @@ while cap.isOpened():
         start_time = time.time()
 #30초 동안 while 문으로 반복
         while time.time() - start_time < secs_for_action:
-            ret, img = cap.read()
+            ret, img = cap.read() #카메라 데이터 읽기
 
-            img = cv2.flip(img, 1)
-            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-            result = hands.process(img)
+            img = cv2.flip(img, 1)  #셀프 카메라처럼 좌우 반전 0보다 크면 좌우 반전/ 0보다 작으면 상하좌우 반전
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB) #미디어파이프에서 인식 가능한 색공간으로 변경 / 이미지에서 손을 인식하는 부분 이미지를 전달해 손을 인식하고 그 결과를 
+            result = hands.process(img) #result 변수에 저장
             img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
 
-            if result.multi_hand_landmarks is not None:
-                for res in result.multi_hand_landmarks:
+            if result.multi_hand_landmarks is not None: #손이 인식되었는지 확인
+                for res in result.multi_hand_landmarks: #반복문을 활용해 인식된 손의 주요 부분을 그림으로 그려 구현하고 result.multi_hand_landmarks에 인식된 손의 주요 정보가 담겨있음 x,y,z,의 정보가 리스트 형태로 담겨있음 주요 부분에 해당하는 번호를 인덱스로 사용하여 데이터 접근 가능
                     joint = np.zeros((21, 4))
                     for j, lm in enumerate(res.landmark):
                         joint[j] = [lm.x, lm.y, lm.z, lm.visibility]
+                        
+                        #print(hand_landmarks.landmark[0].x)
 
                     # Compute angles between joints 각 손가락 각도 구하는 코드 
                     v1 = joint[[0,1,2,3,0,5,6,7,0,9,10,11,0,13,14,15,0,17,18,19], :3] # Parent joint
@@ -71,7 +77,7 @@ while cap.isOpened():
 
                     mp_drawing.draw_landmarks(img, res, mp_hands.HAND_CONNECTIONS) #손
 
-            cv2.imshow('img', img)
+            cv2.imshow('img', img) #영상 화면에 구현
             if cv2.waitKey(1) == ord('q'):
                 break
 

@@ -1,9 +1,13 @@
+"""
+hand_train.py에서 만들어 훈련시킨 모델의 정상작동을 테스트하는 코드
+"""
+
 import cv2
 import mediapipe as mp
 import numpy as np
 from tensorflow.keras.models import load_model
 
-actions = ['open', 'stop']
+actions = ['ON', 'OFF', 'Blur1', 'Blur2', 'Blur3', 'emoticon_ON', 'emoticon_OFF']
 seq_length = 30
 
 model = load_model('models/model.h5')
@@ -12,7 +16,7 @@ model = load_model('models/model.h5')
 mp_hands = mp.solutions.hands
 mp_drawing = mp.solutions.drawing_utils
 hands = mp_hands.Hands(
-    max_num_hands=1,
+    max_num_hands=10,
     min_detection_confidence=0.5,
     min_tracking_confidence=0.5)
 
@@ -92,3 +96,4 @@ while cap.isOpened():
     cv2.imshow('img', img)
     if cv2.waitKey(1) == ord('q'):
         break
+

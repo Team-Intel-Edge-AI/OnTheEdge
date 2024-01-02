@@ -1,3 +1,7 @@
+"""
+hand.py에서 만든 데이터세트를 가지고 모델을 만들어서 훈련시킨다.
+"""
+
 import numpy as np
 import os
 from tensorflow.keras.utils import to_categorical
@@ -13,14 +17,24 @@ os.environ['CUDA_VISIBLE_DEVICES'] = '1'
 os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = 'true'
 
 actions = [
-    'open',
-    'stop'
-    #'spin'
+    'ON',
+    'OFF',
+    'Blur1',
+    'Blur2',
+    'Blur3',
+    'emoticon_ON',
+    'emoticon_OFF'
 ]
 
 data = np.concatenate([
-    np.load('dataset/seq_open_1703818708.npy'),
-    np.load('dataset/seq_stop_1703818708.npy')
+    np.load('dataset/seq_on_1703833437.npy'),
+    np.load('dataset/seq_off_1703833437.npy'),
+    np.load('dataset/seq_Blur1_1703833437.npy'),
+    np.load('dataset/seq_Blur2_1703833437.npy'),
+    np.load('dataset/seq_Blur3_1703833437.npy'),
+    np.load('dataset/seq_emoticon_ON_1703833437.npy'),
+    np.load('dataset/seq_emoticon_OFF_1703833437.npy')
+    
 ], axis=0)
 
 data.shape
@@ -60,7 +74,7 @@ history = model.fit(
     x_train,
     y_train,
     validation_data=(x_val, y_val),
-    epochs=200,
+    epochs=65,
     callbacks=[
         ModelCheckpoint('models/model.h5', monitor='val_acc', verbose=1, save_best_only=True, mode='auto'),
         ReduceLROnPlateau(monitor='val_acc', factor=0.5, patience=50, verbose=1, mode='auto')
@@ -95,4 +109,5 @@ model = load_model('models/model.h5')
 y_pred = model.predict(x_val)
 
 multilabel_confusion_matrix(np.argmax(y_val, axis=1), np.argmax(y_pred, axis=1))
+
 
