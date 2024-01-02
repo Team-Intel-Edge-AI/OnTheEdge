@@ -46,6 +46,16 @@
 ![HLD](https://github.com/Team-Intel-Edge-AI/OnTheEdge/blob/main/doc/UseCase.png)
 
 
+## Class Diagram
+
+![HLD](https://github.com/Team-Intel-Edge-AI/OnTheEdge/blob/main/doc/PlantUML_Class_Diagram.png)
+
+
+## Sequence Diagram
+
+![HLD](https://github.com/Team-Intel-Edge-AI/OnTheEdge/blob/main/doc/PlantUML_Sequence_Diagram.png)
+
+
 ## Clone code
 
 * (각 팀에서 프로젝트를 위해 생성한 repository에 대한 code clone 방법에 대해서 기술)
