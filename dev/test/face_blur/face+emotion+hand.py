@@ -119,7 +119,7 @@ def build_argparser():
     models.add_argument('-m_ed', type=Path, required=True,
                         help='Required. Path to an .xml file with Emotion Detection model.')
     models.add_argument('-m_gd', type=Path, required=True,
-                        help='Required. Path to an .xml file with Gesture Detection model.')
+                        help='Required. Path to a TensorFlow model .h5 file with Gesture Detection model.')
     models.add_argument('--fd_input_size', default=(0, 0), type=int, nargs=2,
                         help='Optional. Specify the input size of detection model for '
                              'reshaping. Example: 500 700.')
@@ -335,6 +335,7 @@ def draw_detections(frame, frame_processor, detections, output_transform, blur_m
 
     return frame
 
+
 def center_crop(frame, crop_size):
     fh, fw, _ = frame.shape
     crop_size[0], crop_size[1] = min(fw, crop_size[0]), min(fh, crop_size[1])
@@ -347,7 +348,7 @@ def main():
     args = build_argparser().parse_args()
 
     cap = open_images_capture(args.input, args.loop)
-    # cap = cv2.VideoCapture(0)
+
     frame_processor = FrameProcessor(args)
 
     frame_num = 0
@@ -355,9 +356,8 @@ def main():
     presenter = None
     output_transform = None
     input_crop = None
-    blur_mode = "DEFAULT"  # 초기값 설정
     
-    model = load_model('models/model.h5') # 손동작 인식용 모델
+    model = load_model(args.m_gd)  # 손동작 인식용 모델
 
     if args.crop_size[0] > 0 and args.crop_size[1] > 0:
         input_crop = np.array(args.crop_size)
@@ -447,6 +447,7 @@ def main():
                 this_action = '?'
                 if action_seq[-1] == action_seq[-2] == action_seq[-3]:
                     this_action = action
+                    print(this_action)
 
                     # Perform action based on the recognized gesture
                     if this_action == 'ON':
@@ -471,25 +472,24 @@ def main():
         if video_writer.isOpened() and (args.output_limit <= 0 or frame_num <= args.output_limit):
             video_writer.write(frame)
 
-        # if not args.no_show:
-        #     cv2.imshow('Face recognition demo', frame)
-        #     key = cv2.waitKey(1)
-        #     if key in {ord('x'), ord('X')}:  # 'x' 키를 누르면 blur_mode를 'NONE'으로 변경
-        #         blur_mode = "NONE"
-        #         print (f"key: {key}")
-        #         print(f"blur mod: {blur_mode}")
-        #     elif key in {ord('c'), ord('C')}:  # 'c' 키를 누르면 blur_mode를 'CHANGE'로 변경
-        #         blur_mode = "CHANGE"
-        #         print (f"key: {key}")
-        #         print(f"blur mod: {blur_mode}")
-        #     elif key in {ord('o'), ord('O')}:  # 'O' 키를 누르면 blur_mode를 'DEFAULT'로 변경
-        #         blur_mode = "DEFAULT"
-        #         print (f"key: {key}")
-        #         print(f"blur mod: {blur_mode}")
-        #     elif key in {ord('q'), ord('Q'), 27}:  # 'q' 키 또는 ESC를 누르면 종료
-        #         print (f"key: {key}")
-        #         break
-        #     presenter.handleKey(key)
+        if not args.no_show:
+            cv2.imshow('Face recognition demo', frame)
+            key = cv2.waitKey(1)
+            # if key in {ord('x'), ord('X')}:  # 'x' 키를 누르면 blur_mode를 'NONE'으로 변경
+            #     blur_mode = "NONE"
+            #     print (f"key: {key}")
+            #     print(f"blur mod: {blur_mode}")
+            # elif key in {ord('c'), ord('C')}:  # 'c' 키를 누르면 blur_mode를 'CHANGE'로 변경
+            #     blur_mode = "CHANGE"
+            #     print (f"key: {key}")
+            #     print(f"blur mod: {blur_mode}")
+            # elif key in {ord('o'), ord('O')}:  # 'O' 키를 누르면 blur_mode를 'DEFAULT'로 변경
+            #     blur_mode = "DEFAULT"
+            #     print (f"key: {key}")
+            #     print(f"blur mod: {blur_mode}")
+            if key in {ord('q'), ord('Q'), 27}:  # 'q' 키 또는 ESC를 누르면 종료
+                break
+            presenter.handleKey(key)
 
     metrics.log_total()
     for rep in presenter.reportMeans():
@@ -497,3 +497,4 @@ def main():
 
 
 if __name__ == '__main__':
+    sys.exit(main() or 0)
