@@ -364,7 +364,10 @@ def main():
     elif not (args.crop_size[0] == 0 and args.crop_size[1] == 0):
         raise ValueError('Both crop height and width should be positive')
     video_writer = cv2.VideoWriter()
-   
+    
+    # 231230 인터럽트로 필터를 끄고 킬 용도의 변수
+    blur_mode = "DEFAULT"
+
     while True:
         start_time = perf_counter()
         frame = cap.read()
@@ -388,9 +391,6 @@ def main():
 
         detections = frame_processor.process(frame)
         presenter.drawGraphs(frame)
-
-        # 231230 인터럽트로 필터를 끄고 킬 용도의 변수
-        blur_mode = "CHANGE"
 
         # 240106 손동작 인식 모델
         img = cap.read()
