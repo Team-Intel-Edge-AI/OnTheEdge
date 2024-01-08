@@ -1,4 +1,4 @@
-python3 face+emotion+hand.py \
+python3 main.py \
   -i /dev/video0 \
   -m_fd intel/face-detection-retail-0004/FP16/face-detection-retail-0004.xml \
   -m_lm intel/landmarks-regression-retail-0009/FP16/landmarks-regression-retail-0009.xml \
