@@ -44,9 +44,6 @@ from frame_processor import FrameProcessor
 from face_drawer import FaceDrawer
 from emotion_detector import EmotionDetector
 
-# 231230 투명한 배경의 이미지를 이용하기 위해서 사용하는 라이브러리 명령창에서 꼭 다운받아야 한다. "pip install pillow"
-# from PIL import Image
-
 log.basicConfig(format='[ %(levelname)s ] %(message)s',
                 level=log.DEBUG, stream=sys.stdout)
 
@@ -54,7 +51,7 @@ DEVICE_KINDS = ['CPU', 'GPU', 'HETERO']
 
 actions = ['ON', 'OFF', 'Blur1', 'Blur2', 'Blur3',
            'emoticon_ON', 'emoticon_OFF']
-seq_length = 30
+SEQ_LENGTH = 30
 
 # MediaPipe hands model
 mp_hands = mp.solutions.hands
@@ -76,8 +73,9 @@ def build_argparser():
 
     general = parser.add_argument_group('General')
     general.add_argument('-i', '--input', required=True,
-                         help='Required. An input to process. The input must be a single image, '
-                              'a folder of images, video file or camera id.')
+                         help='Required. An input to process. The input must '
+                              'be a single image, a folder of images, '
+                              'video file or camera id.')
     general.add_argument('--loop', default=False, action='store_true',
                          help='Optional. Enable reading the input in a loop.')
     general.add_argument('-o', '--output',
@@ -310,10 +308,10 @@ def main():
 
                 mp_drawing.draw_landmarks(img, res, mp_hands.HAND_CONNECTIONS)
 
-                if len(seq) < seq_length:
+                if len(seq) < SEQ_LENGTH:
                     continue
 
-                input_data = np.expand_dims(np.array(seq[-seq_length:],
+                input_data = np.expand_dims(np.array(seq[-SEQ_LENGTH:],
                                                      dtype=np.float32), axis=0)
 
                 y_pred = model.predict(input_data).squeeze()
