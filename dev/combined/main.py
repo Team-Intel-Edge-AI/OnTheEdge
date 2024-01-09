@@ -176,7 +176,6 @@ def draw_detections(frame, frame_processor, detections,
             frame = FaceDrawer.draw_face(frame, xmin, ymin, xmax, ymax,
                                          text, landmarks, output_transform,
                                          emotion_image)
-
     return frame
 
 
