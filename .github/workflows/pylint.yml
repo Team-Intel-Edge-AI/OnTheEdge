@@ -26,4 +26,4 @@ jobs:
         pip install pylint
     - name: Analysing the code with pylint
       run: |
-        pylint $(git ls-files ':(glob)combined/*.py')
+        pylint $(git ls-files ':(glob)*/../../dev/combined/*.py')
