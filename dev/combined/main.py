@@ -20,12 +20,8 @@ import logging as log
 import sys
 from argparse import ArgumentParser
 from pathlib import Path
-
 import cv2
 import numpy as np
-
-# Hand gesture detection imports
-from tensorflow.keras.models import load_model
 
 sys.path.append(str(Path(__file__).resolve().parents[0] / 'common/python'))
 sys.path.append(str(Path(__file__).resolve().parents[0]
@@ -34,7 +30,6 @@ sys.path.append(str(Path(__file__).resolve().parents[0]
 import monitors
 from helpers import resolution
 from images_capture import open_images_capture
-
 from model_api.models import OutputTransform
 from model_api.performance_metrics import PerformanceMetrics
 
@@ -48,6 +43,7 @@ log.basicConfig(format='[ %(levelname)s ] %(message)s',
                 level=log.DEBUG, stream=sys.stdout)
 
 DEVICE_KINDS = ['CPU', 'GPU', 'HETERO']
+
 
 def build_argparser():
     """
@@ -213,15 +209,13 @@ def main():
     args = build_argparser().parse_args()
     cap = open_images_capture(args.input, args.loop)
     frame_processor = FrameProcessor(args)
-    gesture_detector = GestureDetector()
+    gesture_detector = GestureDetector(args)
 
     frame_num = 0
     metrics = PerformanceMetrics()
     presenter = None
     output_transform = None
     input_crop = None
-
-    model = load_model(args.m_gd)  # 손동작 인식용 모델을 로딩
 
     if args.crop_size[0] > 0 and args.crop_size[1] > 0:
         input_crop = np.array(args.crop_size)
@@ -262,8 +256,12 @@ def main():
         detections = frame_processor.process(frame)
         presenter.drawGraphs(frame)
 
-        m_flag, FrameProcessor.blur_value = gesture_detector.detect_gesture(
-            cap, model, seq, action_seq, m_flag, FrameProcessor.blur_value)
+        g_flag, b_value = gesture_detector.detect_gesture(cap, seq, action_seq)
+
+        if g_flag != "":  # g_flag == "" if no change
+            m_flag = g_flag
+        if b_value != -1:  # b_value == -1 if no change
+            FrameProcessor.blur_value = b_value
 
         frame = draw_detections(frame, frame_processor, detections,
                                 output_transform, m_flag, args)
