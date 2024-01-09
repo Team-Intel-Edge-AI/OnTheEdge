@@ -1,5 +1,5 @@
 python3 face+emotion+hand.py \
-  -i /dev/video8 \
+  -i /dev/video0 \
   -m_fd intel/face-detection-retail-0004/FP16/face-detection-retail-0004.xml \
   -m_lm intel/landmarks-regression-retail-0009/FP16/landmarks-regression-retail-0009.xml \
   -m_reid intel/face-reidentification-retail-0095/FP16/face-reidentification-retail-0095.xml \
