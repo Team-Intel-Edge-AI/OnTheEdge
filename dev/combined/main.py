@@ -25,7 +25,6 @@ import cv2
 import numpy as np
 
 # Hand gesture detection imports
-import mediapipe as mp
 from tensorflow.keras.models import load_model
 
 sys.path.append(str(Path(__file__).resolve().parents[0] / 'common/python'))
@@ -43,16 +42,12 @@ from face_identifier import FaceIdentifier
 from frame_processor import FrameProcessor
 from face_drawer import FaceDrawer
 from emotion_detector import EmotionDetector
+from gesture_detector import GestureDetector
 
 log.basicConfig(format='[ %(levelname)s ] %(message)s',
                 level=log.DEBUG, stream=sys.stdout)
 
 DEVICE_KINDS = ['CPU', 'GPU', 'HETERO']
-
-ACTIONS = ['ON', 'OFF', 'Blur1', 'Blur2', 'Blur3',
-           'emoticon_ON', 'emoticon_OFF']
-SEQ_LENGTH = 30
-
 
 def build_argparser():
     """
@@ -200,98 +195,6 @@ def center_crop(frame, crop_size):
                  :]
 
 
-def detect_gestures(cap, hands, seq, mp_drawing, mp_hands,
-                    model, action_seq, m_flag):
-    """
-    Detects registered hand gestures using Google's MediaPipe AI model.
-
-    Returns
-    -------
-    m_flag
-        A string specifying the detected hand gesture, ex) "Blur1"
-    """
-    img = cap.read()
-    img = cv2.flip(img, 1)
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    result = hands.process(img)
-    img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
-
-    if result.multi_hand_landmarks is not None:
-        for res in result.multi_hand_landmarks:
-            joint = np.zeros((21, 4))
-            for j, lm in enumerate(res.landmark):
-                joint[j] = [lm.x, lm.y, lm.z, lm.visibility]
-
-            # Compute angles between joints
-            v1 = joint[[0, 1, 2, 3, 0, 5, 6, 7, 0, 9, 10, 11, 0, 13,
-                        14, 15, 0, 17, 18, 19], :3]  # Parent joint
-            v2 = joint[[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14,
-                        15, 16, 17, 18, 19, 20], :3]  # Child joint
-            v = v2 - v1  # [20, 3]
-            # Normalize v
-            v = v / np.linalg.norm(v, axis=1)[:, np.newaxis]
-
-            # Get angle using arcos of dot product
-            angle = np.arccos(np.einsum('nt,nt->n',
-                                        v[[0, 1, 2, 4, 5, 6, 8, 9, 10,
-                                           12, 13, 14, 16, 17, 18], :],
-                                        v[[1, 2, 3, 5, 6, 7, 9, 10, 11,
-                                           13, 14, 15, 17, 18, 19], :]))
-
-            angle = np.degrees(angle)  # Convert radian to degree
-
-            d = np.concatenate([joint.flatten(), angle])
-
-            seq.append(d)
-
-            mp_drawing.draw_landmarks(img, res, mp_hands.HAND_CONNECTIONS)
-
-            if len(seq) < SEQ_LENGTH:
-                continue
-
-            input_data = np.expand_dims(np.array(seq[-SEQ_LENGTH:],
-                                                 dtype=np.float32), axis=0)
-
-            y_pred = model.predict(input_data).squeeze()
-
-            i_pred = int(np.argmax(y_pred))
-            conf = y_pred[i_pred]
-
-            if conf < 0.9:
-                continue
-
-            action = ACTIONS[i_pred]
-            action_seq.append(action)
-
-            if len(action_seq) < 3:
-                continue
-
-            this_action = '?'
-            if action_seq[-1] == action_seq[-2] == action_seq[-3]:
-                this_action = action
-
-                # Perform action based on the recognized gesture
-                if this_action == 'ON':
-                    m_flag = "DEFAULT"
-                elif this_action == 'OFF':
-                    m_flag = "NONE"
-                elif this_action == 'Blur1':
-                    m_flag = "DEFAULT"
-                    FrameProcessor.blur_value = 0
-                elif this_action == 'Blur2':
-                    m_flag = "DEFAULT"
-                    FrameProcessor.blur_value = 20
-                elif this_action == 'Blur3':
-                    m_flag = "DEFAULT"
-                    FrameProcessor.blur_value = 50
-                elif this_action == 'emoticon_ON':
-                    m_flag = "CHANGE"
-                elif this_action == 'emoticon_OFF':
-                    m_flag = "DEFAULT"
-
-    return m_flag
-
-
 def main():
     """
     Main function, executed by running the run.sh file.
@@ -310,6 +213,7 @@ def main():
     args = build_argparser().parse_args()
     cap = open_images_capture(args.input, args.loop)
     frame_processor = FrameProcessor(args)
+    gesture_detector = GestureDetector()
 
     frame_num = 0
     metrics = PerformanceMetrics()
@@ -324,14 +228,6 @@ def main():
     elif not (args.crop_size[0] == 0 and args.crop_size[1] == 0):
         raise ValueError('Both crop height and width should be positive')
     video_writer = cv2.VideoWriter()
-
-    # MediaPipe hands model
-    mp_hands = mp.solutions.hands
-    mp_drawing = mp.solutions.drawing_utils
-    hands = mp_hands.Hands(
-        max_num_hands=10,
-        min_detection_confidence=0.5,
-        min_tracking_confidence=0.5)
 
     seq = []
     action_seq = []
@@ -366,8 +262,8 @@ def main():
         detections = frame_processor.process(frame)
         presenter.drawGraphs(frame)
 
-        m_flag = detect_gestures(cap, hands, seq, mp_drawing,
-                                 mp_hands, model, action_seq, m_flag)
+        m_flag, FrameProcessor.blur_value = gesture_detector.detect_gesture(
+            cap, model, seq, action_seq, m_flag, FrameProcessor.blur_value)
 
         frame = draw_detections(frame, frame_processor, detections,
                                 output_transform, m_flag, args)
