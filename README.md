@@ -71,7 +71,7 @@ git clone https://github.com/xxx/yyy/zzz
 ```shell
 python -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
+pip install openvino==2023.2.0, opencv-python, numpy, scipy
 ```
 
 ## Steps to build
@@ -91,11 +91,17 @@ make install
 * (프로젝트 실행방법에 대해서 기술, 특별한 사용방법이 있다면 같이 기술)
 
 ```shell
-cd ~/xxxx
-source .venv/bin/activate
+# Activate prepared Python virtual environment
+# ex) source .venv/bin/activate
+
+# Navigate to this cloned repo
+cd ~/<repo>/dev/
+
 
 cd /path/to/repo/xxx/
 python demo.py -i xxx -m yyy -d zzz
+
+ls -ltrh /dev/video* # Linux Ubuntu, 카메라 번호를 확인하여 실행한다
 ```
 
 ## Output
