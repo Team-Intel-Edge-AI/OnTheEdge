@@ -17,6 +17,7 @@
 
 # Face detection imports
 import logging as log
+import os
 import sys
 from argparse import ArgumentParser
 from pathlib import Path
@@ -38,11 +39,18 @@ from frame_processor import FrameProcessor
 from face_drawer import FaceDrawer
 from emotion_detector import EmotionDetector
 from gesture_detector import GestureDetector
+from person_detector import PersonDetector
 
 log.basicConfig(format='[ %(levelname)s ] %(message)s',
                 level=log.DEBUG, stream=sys.stdout)
 
 DEVICE_KINDS = ['CPU', 'GPU', 'HETERO']
+
+FILE = Path(__file__).resolve()
+ROOT = FILE.parents[0]  # YOLOv5 root directory
+if str(ROOT) not in sys.path:
+    sys.path.append(str(ROOT))  # add ROOT to PATH
+ROOT = Path(os.path.relpath(ROOT, Path.cwd()))  # relative
 
 
 def build_argparser():
@@ -135,6 +143,21 @@ def build_argparser():
     infer.add_argument('-exp_r_fd', metavar='NUMBER', type=float, default=1.15,
                        help='Optional. Scaling ratio for boxes \
                         passed to face recognition.')
+    person = parser.add_argument_group('Person detection')
+    person.add_argument('--weights', nargs='+', type=str,
+                        default=ROOT / 'yolov5m.onnx',
+                        help='model path or triton URL')
+    person.add_argument('--source', type=str, default=ROOT / 'data/images',
+                        help='file/dir/URL/glob/screen/0(webcam)')
+    person.add_argument('--data', type=str, default=ROOT / 'data/coco128.yaml',
+                        help='(optional) dataset.yaml path')
+    person.add_argument('--imgsz', '--img', '--img-size', nargs='+', type=int,
+                        default=[640], help='inference size h,w')
+    person.add_argument('--conf-thres', type=float, default=0.7,
+                        help='confidence threshold')
+    person.add_argument('--hide-conf', default=False, action='store_true',
+                        help='hide confidences')
+
     return parser
 
 
@@ -148,9 +171,6 @@ def draw_detections(frame, frame_processor, detections,
 
     for roi, landmarks, identity in zip(*detections):
         text = frame_processor.face_identifier.get_identity_label(identity.id)
-        if identity.id != FaceIdentifier.UNKNOWN_ID:
-            text += ' %.2f%%' % (100.0 * (1 - identity.distance))
-
         xmin = max(int(roi.position[0]), 0)
         ymin = max(int(roi.position[1]), 0)
         xmax = min(int(roi.position[0] + roi.size[0]), size[1])
@@ -160,7 +180,9 @@ def draw_detections(frame, frame_processor, detections,
 
         face_block = frame[ymin:ymax, xmin:xmax]
 
-        if identity.id == FaceIdentifier.UNKNOWN_ID:
+        if identity.id != FaceIdentifier.UNKNOWN_ID:
+            text += ' %.2f%%' % (100.0 * (1 - identity.distance))
+        else:  # if identity.id == FaceIdentifier.UNKNOWN_ID
             if blur_mode == "DEFAULT":
                 frame[ymin:ymax, xmin:xmax] = cv2.GaussianBlur(
                     face_block, (51, 51), FrameProcessor.blur_value)
@@ -216,7 +238,8 @@ def main():
     frame_processor = FrameProcessor(args)
     gesture_detector = GestureDetector(args.m_gd)
     emotion_detector = EmotionDetector(args.m_ed)
-
+    person_detector = PersonDetector()
+    
     frame_num = 0
     metrics = PerformanceMetrics()
     presenter = None
@@ -263,6 +286,8 @@ def main():
         presenter.drawGraphs(frame)
 
         g_flag, b_value = gesture_detector.detect_gesture(cap, seq, action_seq)
+
+        person_detector.run(args.weights, args.source)
 
         if g_flag != "":  # g_flag == "" if no change
             m_flag = g_flag
