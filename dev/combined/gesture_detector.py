@@ -20,7 +20,7 @@ class GestureDetector:
     Detect emotions in a given image of a human face.
     얼굴 표정을 인식하는 모델을 가져오고 표정을 인식한다.
     """
-    def __init__(self, args):
+    def __init__(self, model_path=None):
         # MediaPipe hands model
         self.mp_hands = mp.solutions.hands
         self.mp_drawing = mp.solutions.drawing_utils
@@ -31,7 +31,7 @@ class GestureDetector:
         self.actions = ['ON', 'OFF', 'Blur1', 'Blur2', 'Blur3',
                         'emoticon_ON', 'emoticon_OFF']
         self.seq_length = 30
-        self.model = load_model(args.m_gd)  # 손동작 인식용 모델을 로딩
+        self.model = load_model(model_path)  # 손동작 인식용 모델을 로딩
 
     def detect_gesture(self, cap, seq, action_seq):
         """
