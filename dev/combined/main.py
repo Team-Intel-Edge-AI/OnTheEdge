@@ -162,20 +162,28 @@ def draw_detections(frame, frame_processor, detections,
 
         face_block = frame[ymin:ymax, xmin:xmax]
 
-        if blur_mode == "DEFAULT":
-            blur = cv2.GaussianBlur(face_block, (51, 51),
-                                    FrameProcessor.blur_value)
-            frame[ymin:ymax, xmin:xmax] = blur
-        elif blur_mode == "NONE":
-            pass
-        elif blur_mode == "CHANGE":
-            # 감정 이미지를 얼굴 영역의 높이에 맞추어 크기 조절
-            emotion = emotion_detector.detect_emotion(face_block)
-            bgr_image = cv2.imread(emotion, cv2.IMREAD_UNCHANGED)
-            emotion_image = cv2.cvtColor(bgr_image, cv2.COLOR_BGR2BGRA)
-            frame = FaceDrawer.draw_face(frame, xmin, ymin, xmax, ymax,
-                                         text, landmarks, output_transform,
-                                         emotion_image)
+        if identity.id == FaceIdentifier.UNKNOWN_ID:
+            if blur_mode == "DEFAULT":
+                blur = cv2.GaussianBlur(face_block, (51, 51),
+                                        FrameProcessor.blur_value)
+                frame[ymin:ymax, xmin:xmax] = blur
+            elif blur_mode == "NONE":
+                pass
+            elif blur_mode == "CHANGE":
+                # 감정 이미지를 얼굴 영역의 높이에 맞추어 크기 조절
+                emotion = emotion_detector.detect_emotion(face_block)
+                bgr_image = cv2.imread(emotion, cv2.IMREAD_UNCHANGED)
+                emotion_image = cv2.cvtColor(bgr_image, cv2.COLOR_BGR2BGRA)
+                frame = FaceDrawer.draw_face(frame, xmin, ymin, xmax, ymax,
+                                             text, landmarks, output_transform,
+                                             emotion_image)
+
+        # Uncomment to display text on image, 영상에 텍스트를 출력하기 위해서는 아래 주석을 푸시오.
+        # textsize = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, 0.7, 1)[0]
+        # cv2.rectangle(frame, (xmin, ymin), (xmin + textsize[0], ymin -
+        #               textsize[1]), (0, 255, 0), cv2.FILLED)
+        # cv2.putText(frame, text, (xmin, ymin), cv2.FONT_HERSHEY_SIMPLEX,
+        #             0.7, (0, 0, 0), 1)
 
     return frame
 
