@@ -139,14 +139,12 @@ def build_argparser():
 
 
 def draw_detections(frame, frame_processor, detections,
-                    output_transform, blur_mode, args):
+                    output_transform, blur_mode, emotion_detector):
     """
     Draw detections.
     """
     size = frame.shape[:2]
     frame = output_transform.resize(frame)
-
-    emotion_detector = EmotionDetector(args.m_ed)
 
     for roi, landmarks, identity in zip(*detections):
         text = frame_processor.face_identifier.get_identity_label(identity.id)
@@ -164,11 +162,8 @@ def draw_detections(frame, frame_processor, detections,
 
         if identity.id == FaceIdentifier.UNKNOWN_ID:
             if blur_mode == "DEFAULT":
-                blur = cv2.GaussianBlur(face_block, (51, 51),
-                                        FrameProcessor.blur_value)
-                frame[ymin:ymax, xmin:xmax] = blur
-            elif blur_mode == "NONE":
-                pass
+                frame[ymin:ymax, xmin:xmax] = cv2.GaussianBlur(
+                    face_block, (51, 51), FrameProcessor.blur_value)
             elif blur_mode == "CHANGE":
                 # 감정 이미지를 얼굴 영역의 높이에 맞추어 크기 조절
                 emotion = emotion_detector.detect_emotion(face_block)
@@ -177,6 +172,8 @@ def draw_detections(frame, frame_processor, detections,
                 frame = FaceDrawer.draw_face(frame, xmin, ymin, xmax, ymax,
                                              text, landmarks, output_transform,
                                              emotion_image)
+            else:  # if blur_mode == "NONE"
+                pass
 
         # Uncomment to display text on image, 영상에 텍스트를 출력하기 위해서는 아래 주석을 푸시오.
         # textsize = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, 0.7, 1)[0]
@@ -217,7 +214,8 @@ def main():
     args = build_argparser().parse_args()
     cap = open_images_capture(args.input, args.loop)
     frame_processor = FrameProcessor(args)
-    gesture_detector = GestureDetector(args)
+    gesture_detector = GestureDetector(args.m_gd)
+    emotion_detector = EmotionDetector(args.m_ed)
 
     frame_num = 0
     metrics = PerformanceMetrics()
@@ -272,7 +270,7 @@ def main():
             FrameProcessor.blur_value = b_value
 
         frame = draw_detections(frame, frame_processor, detections,
-                                output_transform, m_flag, args)
+                                output_transform, m_flag, emotion_detector)
         frame_num += 1
         if video_writer.isOpened() and (args.output_limit <= 0 or
                                         frame_num <= args.output_limit):
