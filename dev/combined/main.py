@@ -297,19 +297,23 @@ def main():
         for tup in predictions:
             points = tup[2]
             print("PRINTING POINTS, ROI, FRAME")
-            print(points)
-            roi = img_roi[points[1]:points[3]+400, points[0]:points[2]+400]
-            print("PRINTING POINTS, ROI, FRAME__END")
+            # roi = img_roi[points[1]:points[3]+400, points[0]:points[2]+400]
+
+            cropped = frame.copy()
+            for x,y in np.ndindex(frame.shape[:2]):
+                if y < points[1] or y > points[3]+400 or x < points[0] or x > points[2]+400:
+                    cropped[x][y] = [0, 0, 0]
+
             # cv2.imshow('Test', roi)
             # key = cv2.waitKey(1)
             # if key in {ord('q'), ord('Q'), 27}:  # 'q' 키 또는 ESC를 누르면 종료
             #     break
 
-            detections = frame_processor.process(roi)
-            presenter.drawGraphs(roi)
+            detections = frame_processor.process(cropped)
+            presenter.drawGraphs(cropped)
 
             print("BEFORE GESTURE DETECTION")
-            g_flag, b_value = gesture_detector.detect_gesture(cap, seq, action_seq, roi)
+            g_flag, b_value = gesture_detector.detect_gesture(cap, seq, action_seq, cropped)
             print(g_flag)
             print(b_value)
             print("AFTER GESTURE DETECTION")
@@ -318,10 +322,14 @@ def main():
             if b_value != -1:  # b_value == -1 if no change
                 FrameProcessor.blur_value = b_value
             print("BEFORE DRAW_DETECTIONS")
-            roi = draw_detections(roi, frame_processor, detections,
+            cropped = draw_detections(cropped, frame_processor, detections,
                                     output_transform, m_flag, emotion_detector)
             print("AFTER DRAW_DETECTIONS")
-            frame[points[1]:points[3]+400, points[0]:points[2]+400] = roi
+            # frame[points[1]:points[3]+400, points[0]:points[2]+400] = roi
+            for x,y in np.ndindex(cropped.shape[:2]):
+                if (points[1] < y and y < points[3]+400) and (points[0] < x and x < points[2]+400):
+                    frame[x][y] = cropped[x][y]
+
             frame_num += 1
             if video_writer.isOpened() and (args.output_limit <= 0 or
                                             frame_num <= args.output_limit):
