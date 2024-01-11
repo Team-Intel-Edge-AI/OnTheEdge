@@ -166,10 +166,15 @@ def draw_detections(frame, frame_processor, detections,
     """
     Draw detections.
     """
+    print("INSIDE DRAW_DETECTIONS")
+
     size = frame.shape[:2]
     frame = output_transform.resize(frame)
 
+    print("BEFORE LOOP IN DRAW_DETECTIONS")
+    print(detections)
     for roi, landmarks, identity in zip(*detections):
+        print("LOOPING INSIDE DRAW_DETECTIONS")
         text = frame_processor.face_identifier.get_identity_label(identity.id)
         xmin = max(int(roi.position[0]), 0)
         ymin = max(int(roi.position[1]), 0)
@@ -179,6 +184,9 @@ def draw_detections(frame, frame_processor, detections,
                                                          xmax, ymax])
 
         face_block = frame[ymin:ymax, xmin:xmax]
+
+        print(identity.id)
+        print(blur_mode)
 
         if identity.id != FaceIdentifier.UNKNOWN_ID:
             text += ' %.2f%%' % (100.0 * (1 - identity.distance))
@@ -234,6 +242,7 @@ def main():
     이 폴더를 터미널에서 열어서 "./run.sh" 명령을 실행하세요.
     """
     args = build_argparser().parse_args()
+
     cap = open_images_capture(args.input, args.loop)
     frame_processor = FrameProcessor(args)
     gesture_detector = GestureDetector(args.m_gd)
@@ -257,6 +266,7 @@ def main():
 
     # *** 손동작 인식으로 값이 변하는 제어 변수 ***
     m_flag = "DEFAULT"  # 기본값으로 얼굴 blurring 활성화
+
 
     while True:
         frame = cap.read()
@@ -282,31 +292,49 @@ def main():
                     cap.fps(), output_resolution):
                 raise RuntimeError("Can't open video writer")
 
-        detections = frame_processor.process(frame)
-        presenter.drawGraphs(frame)
+        predictions, img_roi = person_detector.run(frame, args.weights, args.source)
 
-        g_flag, b_value = gesture_detector.detect_gesture(cap, seq, action_seq)
+        for tup in predictions:
+            points = tup[2]
+            print("PRINTING POINTS, ROI, FRAME")
+            print(points)
+            roi = img_roi[points[1]:points[3]+400, points[0]:points[2]+400]
+            print("PRINTING POINTS, ROI, FRAME__END")
+            # cv2.imshow('Test', roi)
+            # key = cv2.waitKey(1)
+            # if key in {ord('q'), ord('Q'), 27}:  # 'q' 키 또는 ESC를 누르면 종료
+            #     break
 
-        person_detector.run(args.weights, args.source)
+            detections = frame_processor.process(roi)
+            presenter.drawGraphs(roi)
 
-        if g_flag != "":  # g_flag == "" if no change
-            m_flag = g_flag
-        if b_value != -1:  # b_value == -1 if no change
-            FrameProcessor.blur_value = b_value
+            print("BEFORE GESTURE DETECTION")
+            g_flag, b_value = gesture_detector.detect_gesture(cap, seq, action_seq, roi)
+            print(g_flag)
+            print(b_value)
+            print("AFTER GESTURE DETECTION")
+            if g_flag != "UNKNOWN":  # g_flag == "" if no change
+                m_flag = g_flag
+            if b_value != -1:  # b_value == -1 if no change
+                FrameProcessor.blur_value = b_value
+            print("BEFORE DRAW_DETECTIONS")
+            roi = draw_detections(roi, frame_processor, detections,
+                                    output_transform, m_flag, emotion_detector)
+            print("AFTER DRAW_DETECTIONS")
+            frame[points[1]:points[3]+400, points[0]:points[2]+400] = roi
+            frame_num += 1
+            if video_writer.isOpened() and (args.output_limit <= 0 or
+                                            frame_num <= args.output_limit):
+                video_writer.write(frame)
 
-        frame = draw_detections(frame, frame_processor, detections,
-                                output_transform, m_flag, emotion_detector)
-        frame_num += 1
-        if video_writer.isOpened() and (args.output_limit <= 0 or
-                                        frame_num <= args.output_limit):
-            video_writer.write(frame)
+            if not args.no_show:
+                cv2.imshow('Face recognition demo', frame)
+                key = cv2.waitKey(1)
+                if key in {ord('q'), ord('Q'), 27}:  # 'q' 키 또는 ESC를 누르면 종료
+                    break
+                presenter.handleKey(key)
+        print("GOT HERE TO THE END OF THE FUNCTION")
 
-        if not args.no_show:
-            cv2.imshow('Face recognition demo', frame)
-            key = cv2.waitKey(1)
-            if key in {ord('q'), ord('Q'), 27}:  # 'q' 키 또는 ESC를 누르면 종료
-                break
-            presenter.handleKey(key)
 
     metrics.log_total()
     for rep in presenter.reportMeans():

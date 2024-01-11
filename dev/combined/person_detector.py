@@ -41,40 +41,28 @@ class PersonDetector:
     @smart_inference_mode()
     def run(
         self,
+        f_input,  # Frame read from video capture or other source
         weights=ROOT / 'yolov5m.pt',  # model path or triton URL
         source=ROOT / 'data/images',  # file/dir/URL/glob/screen/0(webcam)
-        data=ROOT / 'data/coco128.yaml',  # dataset.yaml path
         imgsz=(640, 640),  # inference size (height, width)
         conf_thres=0.7,  # confidence threshold
         hide_conf=False,  # hide confidences
         device='',  # cuda device, i.e. 0 or 0,1,2,3 or cpu
-        half=False,  # use FP16 half-precision inference
-        dnn=False  # use OpenCV DNN for ONNX inference
     ):
         """
         Run person detection using YOLOv5 model.
         """
 
-        source = str(source)
-        webcam = source.isnumeric() or source.endswith('.streams')
-
-        print(source)
-
         # Load model
         device = select_device(device)
-        model = DetectMultiBackend(weights, device=device, dnn=dnn, data=data, fp16=half)
+        model = DetectMultiBackend(weights, device=device)
         stride, names, pt = model.stride, model.names, model.pt
         imgsz = check_img_size(imgsz, s=stride)  # check image size
 
         # Dataloader
         bs = 1  # batch_size
-        if webcam:
-            view_img = check_imshow(warn=True)
-            dataset = LoadStreams(source, img_size=imgsz, stride=stride, auto=pt, vid_stride=self.vid_stride)
-            bs = len(dataset)
-        vid_path, vid_writer = [None] * bs, [None] * bs
-
-        break_key = False
+        dataset = LoadStreams(f_in=f_input, img_size=imgsz, stride=stride, auto=pt, vid_stride=1)
+        bs = len(dataset)
 
         # Run inference
         model.warmup(imgsz=(1 if pt or model.triton else bs, 3, *imgsz))  # warmup
@@ -93,22 +81,19 @@ class PersonDetector:
 
             # NMS
             with dt[2]:
-                pred = non_max_suppression(pred, conf_thres, self.iou_thres, self.classes, self.agnostic_nms, max_det=self.max_det)
+                pred = non_max_suppression(pred, conf_thres, max_det=1000)
 
             # Process predictions
             for i, det in enumerate(pred):  # per image
                 seen += 1
-                if webcam:  # batch_size >= 1
-                    p, im0, frame = path[i], im0s[i].copy(), dataset.count
-                    s += f'{i}: '
-                else:
-                    p, im0, frame = path, im0s.copy(), getattr(dataset, 'frame', 0)
-
-                p = Path(p)  # to Path
+                p, im0, frame = path[i], im0s[i].copy(), dataset.count
+                s += f'{i}: '
+                
+                # p = Path(p)  # to Path
                 s += '%gx%g ' % im.shape[2:]  # print string
                 
-                annotator = Annotator(im0, line_width=self.line_thickness, example=str(names))
-                
+                annotator = Annotator(im0, line_width=3, example=str(names))
+
                 predictions = []  # Store predictions for each person
                 for *xyxy, conf, cls in reversed(det):
                     c = int(cls)  # integer class
@@ -122,24 +107,23 @@ class PersonDetector:
                         roi_coordinates = [int(coord) for coord in xyxy]
                         print(f"ROI Coordinates for Person {len(predictions) + 1}: {roi_coordinates}")  # print ROI coordinates for person detection
                         predictions.append((label, confidence_str, roi_coordinates))
-                
-                print(predictions)
                         
+                return predictions, annotator.result()
                 # Stream results
-                im0 = annotator.result()
-                if view_img:
-                    if platform.system() == 'Linux' and p not in windows:
-                        windows.append(p)
-                        cv2.namedWindow(str(p), cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO)  # allow window resize (Linux)
-                        cv2.resizeWindow(str(p), im0.shape[1], im0.shape[0])
-                    cv2.imshow(str(p), im0)
-                    key = cv2.waitKey(1)  # 1 millisecond
-                    if key in {ord('q'), ord('Q'), 27}:  # 'q' 키 또는 ESC를 누르면 종료
-                        break_key = True
-                        break
-            if break_key is True:
-                break
-
+            #     im0 = annotator.result()
+            #     if view_img:
+            #         if platform.system() == 'Linux' and p not in windows:
+            #             windows.append(p)
+            #             cv2.namedWindow(str(p), cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO)  # allow window resize (Linux)
+            #             cv2.resizeWindow(str(p), im0.shape[1], im0.shape[0])
+            #         cv2.imshow(str(p), im0)
+            #         key = cv2.waitKey(1)  # 1 millisecond
+            #         if key in {ord('q'), ord('Q'), 27}:  # 'q' 키 또는 ESC를 누르면 종료
+            #             break_key = True
+            #             break
+            # if break_key is True:
+            #     break
+                        
             # Print time (inference-only)
             LOGGER.info(f"{s}{'' if len(det) else '(no detections), '}{dt[1].dt * 1E3:.1f}ms")
-
+            

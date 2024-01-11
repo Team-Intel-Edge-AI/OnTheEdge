@@ -11,6 +11,7 @@ from landmarks_detector import LandmarksDetector
 from face_detector import FaceDetector
 from faces_database import FacesDatabase
 from face_identifier import FaceIdentifier
+import cv2
 
 
 class FrameProcessor:
@@ -54,15 +55,18 @@ class FrameProcessor:
         """
         Process a video frame.
         """
+        print("FRAME IS WORKING ")
         orig_image = frame.copy()
+        # cv2.imshow('Frame demo', orig_image)
+        # key = cv2.waitKey(1)
 
         rois = self.face_detector.infer((frame,))
+        print(rois)
         if self.QUEUE_SIZE < len(rois):
             log.warning('Too many faces for processing. \
                         Will be processed only %s of %s',
                         self.QUEUE_SIZE, len(rois))
             rois = rois[:self.QUEUE_SIZE]
-
         landmarks = self.landmarks_detector.infer((frame, rois))
         face_identities, unknowns = self.face_identifier.infer((frame,
                                                                 rois,
