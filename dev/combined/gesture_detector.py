@@ -43,9 +43,6 @@ class GestureDetector:
         result = self.hands.process(img)
         img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
 
-        # cv2.imshow('Face recognition demo', img)
-        # key = cv2.waitKey(1)
-
         g_flag = ""
         b_value = -1
 
