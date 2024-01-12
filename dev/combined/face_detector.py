@@ -17,7 +17,7 @@
 import numpy as np
 
 from ie_module import Module
-from utils import resize_input
+from f_utils import resize_input
 
 from openvino.runtime import PartialShape
 

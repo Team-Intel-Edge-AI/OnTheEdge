@@ -6,11 +6,12 @@ Class to process video frames and apply face detection and recognition ML/AI mod
 
 import logging as log
 from openvino.runtime import Core, get_version
-from utils import crop
+from f_utils import crop
 from landmarks_detector import LandmarksDetector
 from face_detector import FaceDetector
 from faces_database import FacesDatabase
 from face_identifier import FaceIdentifier
+import cv2
 
 
 class FrameProcessor:
@@ -57,12 +58,12 @@ class FrameProcessor:
         orig_image = frame.copy()
 
         rois = self.face_detector.infer((frame,))
+
         if self.QUEUE_SIZE < len(rois):
             log.warning('Too many faces for processing. \
                         Will be processed only %s of %s',
                         self.QUEUE_SIZE, len(rois))
             rois = rois[:self.QUEUE_SIZE]
-
         landmarks = self.landmarks_detector.infer((frame, rois))
         face_identities, unknowns = self.face_identifier.infer((frame,
                                                                 rois,

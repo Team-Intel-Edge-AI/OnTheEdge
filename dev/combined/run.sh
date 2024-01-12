@@ -4,4 +4,7 @@ python3 main.py \
   -m_lm intel/landmarks-regression-retail-0009/FP16/landmarks-regression-retail-0009.xml \
   -m_reid intel/face-reidentification-retail-0095/FP16/face-reidentification-retail-0095.xml \
   -m_ed intel/emotions-recognition-retail-0003/FP16/emotions-recognition-retail-0003.xml \
-  -m_gd intel/models/model.h5
+  -m_gd intel/models/model.h5 \
+  --weights intel/yolov5s_1000.onnx \
+  --source 0
+  
