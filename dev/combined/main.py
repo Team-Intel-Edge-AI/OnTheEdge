@@ -286,51 +286,51 @@ def main():
 
         predictions, img_roi = person_detector.run(frame, args.weights, args.source)
 
-        for tup in predictions:
-            points = tup[2]
-            # roi = img_roi[points[1]:points[3]+400, points[0]:points[2]+400]
+        # for tup in predictions:
+        #     points = tup[2]
+        #     # roi = img_roi[points[1]:points[3]+400, points[0]:points[2]+400]
 
-            cropped = frame.copy()
-            for x, y in np.ndindex(frame.shape[:2]):
-                if y < points[1] or y > (points[3]+400) or x < points[0] or x > (points[2]+400):
-                    cropped[x][y] = [0, 0, 0]
+        #     cropped = frame.copy()
+        #     for x, y in np.ndindex(frame.shape[:2]):
+        #         if y < points[1] or y > (points[3]+400) or x < points[0] or x > (points[2]+400):
+        #             cropped[x][y] = [0, 0, 0]
 
-            # cv2.imshow('Test', roi)
-            # key = cv2.waitKey(1)
-            # if key in {ord('q'), ord('Q'), 27}:  # 'q' 키 또는 ESC를 누르면 종료
-            #     break
+        #     # cv2.imshow('Test', roi)
+        #     # key = cv2.waitKey(1)
+        #     # if key in {ord('q'), ord('Q'), 27}:  # 'q' 키 또는 ESC를 누르면 종료
+        #     #     break
 
-            detections = frame_processor.process(cropped)
-            presenter.drawGraphs(cropped)
+        #     detections = frame_processor.process(cropped)
+        #     presenter.drawGraphs(cropped)
 
-            g_flag, b_value = gesture_detector.detect_gesture(cap, seq, action_seq, cropped)
+        #     g_flag, b_value = gesture_detector.detect_gesture(cap, seq, action_seq, cropped)
 
-            if g_flag != "UNKNOWN":  # g_flag == "" if no change
-                m_flag = g_flag
-            if b_value != -1:  # b_value == -1 if no change
-                FrameProcessor.blur_value = b_value
+        #     if g_flag != "UNKNOWN":  # g_flag == "" if no change
+        #         m_flag = g_flag
+        #     if b_value != -1:  # b_value == -1 if no change
+        #         FrameProcessor.blur_value = b_value
 
-            cropped = draw_detections(cropped, frame_processor,
-                                      detections, output_transform,
-                                      m_flag, emotion_detector)
+        #     cropped = draw_detections(cropped, frame_processor,
+        #                               detections, output_transform,
+        #                               m_flag, emotion_detector)
 
-            # frame[points[1]:points[3]+400, points[0]:points[2]+400] = roi
+        #     # frame[points[1]:points[3]+400, points[0]:points[2]+400] = roi
 
-            for x, y in np.ndindex(cropped.shape[:2]):
-                if y < points[1] or y > (points[3]+400) or x < points[0] or x > (points[2]+400):
-                    frame[x][y] = cropped[x][y]
+        #     for x, y in np.ndindex(cropped.shape[:2]):
+        #         if y < points[1] or y > (points[3]+400) or x < points[0] or x > (points[2]+400):
+        #             frame[x][y] = cropped[x][y]
 
-            frame_num += 1
-            if video_writer.isOpened() and (args.output_limit <= 0 or
-                                            frame_num <= args.output_limit):
-                video_writer.write(frame)
+        #     frame_num += 1
+        #     if video_writer.isOpened() and (args.output_limit <= 0 or
+        #                                     frame_num <= args.output_limit):
+        #         video_writer.write(frame)
 
-            if not args.no_show:
-                cv2.imshow('Face recognition demo', frame)
-                key = cv2.waitKey(1)
-                if key in {ord('q'), ord('Q'), 27}:  # 'q' 키 또는 ESC를 누르면 종료
-                    break
-                presenter.handleKey(key)
+        if not args.no_show:
+            cv2.imshow('Face recognition demo', frame)
+            key = cv2.waitKey(1)
+            if key in {ord('q'), ord('Q'), 27}:  # 'q' 키 또는 ESC를 누르면 종료
+                break
+            # presenter.handleKey(key)
 
     metrics.log_total()
     for rep in presenter.reportMeans():

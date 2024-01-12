@@ -7,3 +7,4 @@ python3 main.py \
   -m_gd intel/models/model.h5 \
   --weights intel/yolov5s_1000.onnx \
   --source 0
+  

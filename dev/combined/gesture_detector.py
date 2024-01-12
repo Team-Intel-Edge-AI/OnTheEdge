@@ -72,7 +72,6 @@ class GestureDetector:
                 if len(action_seq) < 3:
                     continue
                 
-                print("GOT HERE")
                 if action_seq[-1] == action_seq[-2] == action_seq[-3]:
                     # Perform action based on the recognized gesture
                     g_flag, b_value = self.switch_case(action)
