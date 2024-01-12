@@ -17,7 +17,6 @@
 
 # Face detection imports
 import logging as log
-import os
 import sys
 from argparse import ArgumentParser
 from pathlib import Path
@@ -39,18 +38,11 @@ from frame_processor import FrameProcessor
 from face_drawer import FaceDrawer
 from emotion_detector import EmotionDetector
 from gesture_detector import GestureDetector
-from person_detector import PersonDetector
 
 log.basicConfig(format='[ %(levelname)s ] %(message)s',
                 level=log.DEBUG, stream=sys.stdout)
 
 DEVICE_KINDS = ['CPU', 'GPU', 'HETERO']
-
-FILE = Path(__file__).resolve()
-ROOT = FILE.parents[0]  # YOLOv5 root directory
-if str(ROOT) not in sys.path:
-    sys.path.append(str(ROOT))  # add ROOT to PATH
-ROOT = Path(os.path.relpath(ROOT, Path.cwd()))  # relative
 
 
 def build_argparser():
@@ -143,21 +135,6 @@ def build_argparser():
     infer.add_argument('-exp_r_fd', metavar='NUMBER', type=float, default=1.15,
                        help='Optional. Scaling ratio for boxes \
                         passed to face recognition.')
-    person = parser.add_argument_group('Person detection')
-    person.add_argument('--weights', nargs='+', type=str,
-                        default=ROOT / 'yolov5m.onnx',
-                        help='model path or triton URL')
-    person.add_argument('--source', type=str, default=ROOT / 'data/images',
-                        help='file/dir/URL/glob/screen/0(webcam)')
-    person.add_argument('--data', type=str, default=ROOT / 'data/coco128.yaml',
-                        help='(optional) dataset.yaml path')
-    person.add_argument('--imgsz', '--img', '--img-size', nargs='+', type=int,
-                        default=[640], help='inference size h,w')
-    person.add_argument('--conf-thres', type=float, default=0.7,
-                        help='confidence threshold')
-    person.add_argument('--hide-conf', default=False, action='store_true',
-                        help='hide confidences')
-
     return parser
 
 
@@ -169,8 +146,13 @@ def draw_detections(frame, frame_processor, detections,
     size = frame.shape[:2]
     frame = output_transform.resize(frame)
 
+    img_roi = None
+
     for roi, landmarks, identity in zip(*detections):
         text = frame_processor.face_identifier.get_identity_label(identity.id)
+        if identity.id != FaceIdentifier.UNKNOWN_ID:
+            text += ' %.2f%%' % (100.0 * (1 - identity.distance))
+
         xmin = max(int(roi.position[0]), 0)
         ymin = max(int(roi.position[1]), 0)
         xmax = min(int(roi.position[0] + roi.size[0]), size[1])
@@ -180,9 +162,7 @@ def draw_detections(frame, frame_processor, detections,
 
         face_block = frame[ymin:ymax, xmin:xmax]
 
-        if identity.id != FaceIdentifier.UNKNOWN_ID:
-            text += ' %.2f%%' % (100.0 * (1 - identity.distance))
-        else:  # if identity.id == FaceIdentifier.UNKNOWN_ID
+        if identity.id == FaceIdentifier.UNKNOWN_ID:
             if blur_mode == "DEFAULT":
                 frame[ymin:ymax, xmin:xmax] = cv2.GaussianBlur(
                     face_block, (51, 51), FrameProcessor.blur_value)
@@ -196,6 +176,12 @@ def draw_detections(frame, frame_processor, detections,
                                              emotion_image)
             else:  # if blur_mode == "NONE"
                 pass
+        else:  # if identity.id != FaceIdentifier.UNKNOWN_ID
+            img_roi = frame[ymin:ymax+400, xmin:xmax+400]
+            # cv2.imshow('Face recognition demo', frame[ymin:ymax, xmin:xmax])
+            # key = cv2.waitKey(1)
+            # if key in {ord('q'), ord('Q'), 27}:  # 'q' 키 또는 ESC를 누르면 종료
+            #     break
 
         # Uncomment to display text on image, 영상에 텍스트를 출력하기 위해서는 아래 주석을 푸시오.
         # textsize = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, 0.7, 1)[0]
@@ -204,7 +190,7 @@ def draw_detections(frame, frame_processor, detections,
         # cv2.putText(frame, text, (xmin, ymin), cv2.FONT_HERSHEY_SIMPLEX,
         #             0.7, (0, 0, 0), 1)
 
-    return frame
+    return frame, img_roi
 
 
 def center_crop(frame, crop_size):
@@ -234,13 +220,11 @@ def main():
     이 폴더를 터미널에서 열어서 "./run.sh" 명령을 실행하세요.
     """
     args = build_argparser().parse_args()
-
     cap = open_images_capture(args.input, args.loop)
     frame_processor = FrameProcessor(args)
     gesture_detector = GestureDetector(args.m_gd)
     emotion_detector = EmotionDetector(args.m_ed)
-    person_detector = PersonDetector()
-    
+
     frame_num = 0
     metrics = PerformanceMetrics()
     presenter = None
@@ -258,7 +242,6 @@ def main():
 
     # *** 손동작 인식으로 값이 변하는 제어 변수 ***
     m_flag = "DEFAULT"  # 기본값으로 얼굴 blurring 활성화
-
 
     while True:
         frame = cap.read()
@@ -284,53 +267,34 @@ def main():
                     cap.fps(), output_resolution):
                 raise RuntimeError("Can't open video writer")
 
-        predictions, img_roi = person_detector.run(frame, args.weights, args.source)
+        detections = frame_processor.process(frame)
+        presenter.drawGraphs(frame)
 
-        # for tup in predictions:
-        #     points = tup[2]
-        #     # roi = img_roi[points[1]:points[3]+400, points[0]:points[2]+400]
+        g_flag = ""
+        b_value = -1
 
-        #     cropped = frame.copy()
-        #     for x, y in np.ndindex(frame.shape[:2]):
-        #         if y < points[1] or y > (points[3]+400) or x < points[0] or x > (points[2]+400):
-        #             cropped[x][y] = [0, 0, 0]
+        frame, img_roi = draw_detections(frame, frame_processor, detections,
+                                output_transform, m_flag, emotion_detector)
+        
+        if img_roi is not None:
+            g_flag, b_value = gesture_detector.detect_gesture(img_roi, seq, action_seq)
 
-        #     # cv2.imshow('Test', roi)
-        #     # key = cv2.waitKey(1)
-        #     # if key in {ord('q'), ord('Q'), 27}:  # 'q' 키 또는 ESC를 누르면 종료
-        #     #     break
+        if g_flag != "":  # g_flag == "" if no change
+            m_flag = g_flag
+        if b_value != -1:  # b_value == -1 if no change
+            FrameProcessor.blur_value = b_value
 
-        #     detections = frame_processor.process(cropped)
-        #     presenter.drawGraphs(cropped)
-
-        #     g_flag, b_value = gesture_detector.detect_gesture(cap, seq, action_seq, cropped)
-
-        #     if g_flag != "UNKNOWN":  # g_flag == "" if no change
-        #         m_flag = g_flag
-        #     if b_value != -1:  # b_value == -1 if no change
-        #         FrameProcessor.blur_value = b_value
-
-        #     cropped = draw_detections(cropped, frame_processor,
-        #                               detections, output_transform,
-        #                               m_flag, emotion_detector)
-
-        #     # frame[points[1]:points[3]+400, points[0]:points[2]+400] = roi
-
-        #     for x, y in np.ndindex(cropped.shape[:2]):
-        #         if y < points[1] or y > (points[3]+400) or x < points[0] or x > (points[2]+400):
-        #             frame[x][y] = cropped[x][y]
-
-        #     frame_num += 1
-        #     if video_writer.isOpened() and (args.output_limit <= 0 or
-        #                                     frame_num <= args.output_limit):
-        #         video_writer.write(frame)
+        frame_num += 1
+        if video_writer.isOpened() and (args.output_limit <= 0 or
+                                        frame_num <= args.output_limit):
+            video_writer.write(frame)
 
         if not args.no_show:
             cv2.imshow('Face recognition demo', frame)
             key = cv2.waitKey(1)
             if key in {ord('q'), ord('Q'), 27}:  # 'q' 키 또는 ESC를 누르면 종료
                 break
-            # presenter.handleKey(key)
+            presenter.handleKey(key)
 
     metrics.log_total()
     for rep in presenter.reportMeans():
