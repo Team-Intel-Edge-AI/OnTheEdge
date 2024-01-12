@@ -38,6 +38,7 @@ from frame_processor import FrameProcessor
 from face_drawer import FaceDrawer
 from emotion_detector import EmotionDetector
 from gesture_detector import GestureDetector
+from person_detector import PersonDetector
 
 log.basicConfig(format='[ %(levelname)s ] %(message)s',
                 level=log.DEBUG, stream=sys.stdout)
@@ -111,6 +112,9 @@ def build_argparser():
     models.add_argument('-m_gd', type=Path, required=True,
                         help='Required. Path to a TensorFlow model .h5 file \
                             with Gesture Detection model.')
+    models.add_argument('-m_pd', type=Path, required=True,
+                        help='Required. Path to a OpenVINO model \
+                            with Person Detection model.')
     models.add_argument('--fd_input_size', default=(0, 0), type=int, nargs=2,
                         help='Optional. Specify the input size of detection \
                             model for reshaping. Example: 500 700.')
@@ -146,8 +150,6 @@ def draw_detections(frame, frame_processor, detections,
     size = frame.shape[:2]
     frame = output_transform.resize(frame)
 
-    img_roi = None
-
     for roi, landmarks, identity in zip(*detections):
         text = frame_processor.face_identifier.get_identity_label(identity.id)
         if identity.id != FaceIdentifier.UNKNOWN_ID:
@@ -177,11 +179,6 @@ def draw_detections(frame, frame_processor, detections,
                                              emotion_image)
             else:  # if blur_mode == "NONE"
                 pass
-        else:  # if identity.id != FaceIdentifier.UNKNOWN_ID
-            # 등록된 사용자일 경우에만 img_roi에 값이 채워진다. 그 외의 경우에는 img_roi is None이다
-            # 손동작 인식을 위해서 얼굴 뿐만아니라 가슴 부분까지 ROI로 잡도록 한다
-            # 손이 얼굴을 가릴 경우 얼굴 인식이 안되기 때문에 손을 가슴 앞에 위치시켜서 손동작을 해야 한다
-            img_roi = frame[ymin:ymax+400, xmin:xmax+400]
 
         # Uncomment to display text on image, 영상에 텍스트를 출력하기 위해서는 아래 주석을 푸시오
         # textsize = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, 0.7, 1)[0]
@@ -190,7 +187,7 @@ def draw_detections(frame, frame_processor, detections,
         # cv2.putText(frame, text, (xmin, ymin), cv2.FONT_HERSHEY_SIMPLEX,
         #             0.7, (0, 0, 0), 1)
 
-    return frame, img_roi
+    return frame
 
 
 def center_crop(frame, crop_size):
@@ -226,6 +223,7 @@ def main():
     frame_processor = FrameProcessor(args)  # 영상 프레임 처리기
     gesture_detector = GestureDetector(args.m_gd)  # 손동작 인식 인식 모델
     emotion_detector = EmotionDetector(args.m_ed)  # 얼굴 감정 인식 모델
+    person_detector = PersonDetector(args.m_pd)  # 사람 인식 모델
 
     frame_num = 0
     metrics = PerformanceMetrics()
@@ -269,26 +267,28 @@ def main():
                     cap.fps(), output_resolution):
                 raise RuntimeError("Can't open video writer")
 
-        detections = frame_processor.process(frame)
-        presenter.drawGraphs(frame)
+        boxes = person_detector.detect_people(frame)  # boxes is list
 
-        g_flag = ""  # g_flag == no hand gesture detected
-        b_value = -1  # b_value == no blurring degree detected in hand gesture
+        for label, score, box in boxes:
+            x2 = box[0] + box[2]
+            y2 = box[1] + box[3]
+            roi = frame[box[0]:x2, box[1]:y2]
+            detections = frame_processor.process(roi)
+            presenter.drawGraphs(roi)
+            # 인식된 얼굴, 손동작, 얼굴 감정에 따라 얼굴에 영상처리를 한다
+            # 만약 등록된 사용자가 영상 속에 있다면 img_roi로 해당 사용자의 얼굴과 가슴 영역을 돌려준다
+            g_flag, b_value = gesture_detector.detect_gesture(roi, seq, action_seq)
 
-        # 인식된 얼굴, 손동작, 얼굴 감정에 따라 얼굴에 영상처리를 한다
-        # 만약 등록된 사용자가 영상 속에 있다면 img_roi로 해당 사용자의 얼굴과 가슴 영역을 돌려준다
-        frame, img_roi = draw_detections(frame, frame_processor,
-                                         detections, output_transform,
-                                         m_flag, emotion_detector)
+            if g_flag != "":  # g_flag == "" if no change
+                m_flag = g_flag
+            if b_value != -1:  # b_value == -1 if no change
+                FrameProcessor.blur_value = b_value
 
-        if img_roi is not None:  # 등록된 사용자가 인식되었다면 not None
-            g_flag, b_value = gesture_detector.detect_gesture(img_roi,
-                                                              seq, action_seq)
+            roi = draw_detections(roi, frame_processor,
+                                  detections, output_transform,
+                                  m_flag, emotion_detector)
 
-        if g_flag != "":  # g_flag == "" if no change
-            m_flag = g_flag
-        if b_value != -1:  # b_value == -1 if no change
-            FrameProcessor.blur_value = b_value
+            frame[box[0]:x2, box[1]:y2] = roi
 
         frame_num += 1
         if video_writer.isOpened() and (args.output_limit <= 0 or
