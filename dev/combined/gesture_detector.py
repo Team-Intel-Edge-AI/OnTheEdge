@@ -33,17 +33,20 @@ class GestureDetector:
         self.seq_length = 30
         self.model = load_model(model_path)  # 손동작 인식용 모델을 로딩
 
-    def detect_gesture(self, cap, seq, action_seq, roi):
+    def detect_gesture(self, img_roi, seq, action_seq):
         """
         Function to detect emotions in a human face image.
         """
-        img = roi
+        img = img_roi
         img = cv2.flip(img, 1)
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         result = self.hands.process(img)
         img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
 
-        g_flag = "UNKNOWN"
+        # cv2.imshow('Face recognition demo', img)
+        # key = cv2.waitKey(1)
+
+        g_flag = ""
         b_value = -1
 
         if result.multi_hand_landmarks is not None:
@@ -71,7 +74,7 @@ class GestureDetector:
 
                 if len(action_seq) < 3:
                     continue
-                
+
                 if action_seq[-1] == action_seq[-2] == action_seq[-3]:
                     # Perform action based on the recognized gesture
                     g_flag, b_value = self.switch_case(action)
