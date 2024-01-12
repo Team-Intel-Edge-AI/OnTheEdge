@@ -66,12 +66,14 @@ git clone https://github.com/xxx/yyy/zzz
 
 ## Prerequisite
 
-* (프로잭트를 실행하기 위해 필요한 dependencies 및 configuration들이 있다면, 설치 및 설정 방법에 대해 기술)
+* The following code assumes Python 3.10 is installed on the computer. Please install Python 3.10 if not already installed.
+* 이하 코드는 컴퓨터에 파이썬 3.10버전이 설치되어있다고 가정합니다. 만약 파이썬을 설치하시지 않으셨다면 파이썬 3.10버전을 먼저 설치해주세요.
 
 ```shell
-python -m venv .venv
-source .venv/bin/activate
-pip install openvino==2023.2.0, opencv-python, numpy, scipy
+python -m venv .edge_env
+source .edge_env/bin/activate
+pip install --upgrade pip
+pip install openvino==2023.2.0, opencv-python, numpy, scipy, mediapipe
 ```
 
 ## Steps to build
@@ -92,10 +94,10 @@ make install
 
 ```shell
 # Activate prepared Python virtual environment
-# ex) source .venv/bin/activate
+# ex) source .edge_env/bin/activate
 
 # Navigate to this cloned repo
-cd ~/<repo>/dev/
+cd ~/<repo>/dev
 
 
 cd /path/to/repo/xxx/
