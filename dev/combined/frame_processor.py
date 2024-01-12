@@ -55,13 +55,10 @@ class FrameProcessor:
         """
         Process a video frame.
         """
-        print("FRAME IS WORKING ")
         orig_image = frame.copy()
-        # cv2.imshow('Frame demo', orig_image)
-        # key = cv2.waitKey(1)
 
         rois = self.face_detector.infer((frame,))
-        print(rois)
+
         if self.QUEUE_SIZE < len(rois):
             log.warning('Too many faces for processing. \
                         Will be processed only %s of %s',
