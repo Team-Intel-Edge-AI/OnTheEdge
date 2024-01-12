@@ -164,10 +164,11 @@ def draw_detections(frame, frame_processor, detections,
 
         if identity.id == FaceIdentifier.UNKNOWN_ID:
             if blur_mode == "DEFAULT":
+                # 기본값으로 얼굴 영역을 가려버린다
                 frame[ymin:ymax, xmin:xmax] = cv2.GaussianBlur(
                     face_block, (51, 51), FrameProcessor.blur_value)
             elif blur_mode == "CHANGE":
-                # 감정 이미지를 얼굴 영역의 높이에 맞추어 크기 조절
+                # 감정 이미지를 얼굴 영역의 높이에 맞추어 크기를 조절한다
                 emotion = emotion_detector.detect_emotion(face_block)
                 bgr_image = cv2.imread(emotion, cv2.IMREAD_UNCHANGED)
                 emotion_image = cv2.cvtColor(bgr_image, cv2.COLOR_BGR2BGRA)
@@ -177,13 +178,12 @@ def draw_detections(frame, frame_processor, detections,
             else:  # if blur_mode == "NONE"
                 pass
         else:  # if identity.id != FaceIdentifier.UNKNOWN_ID
+            # 등록된 사용자일 경우에만 img_roi에 값이 채워진다. 그 외의 경우에는 img_roi is None이다
+            # 손동작 인식을 위해서 얼굴 뿐만아니라 가슴 부분까지 ROI로 잡도록 한다
+            # 손이 얼굴을 가릴 경우 얼굴 인식이 안되기 때문에 손을 가슴 앞에 위치시켜서 손동작을 해야 한다
             img_roi = frame[ymin:ymax+400, xmin:xmax+400]
-            # cv2.imshow('Face recognition demo', frame[ymin:ymax, xmin:xmax])
-            # key = cv2.waitKey(1)
-            # if key in {ord('q'), ord('Q'), 27}:  # 'q' 키 또는 ESC를 누르면 종료
-            #     break
 
-        # Uncomment to display text on image, 영상에 텍스트를 출력하기 위해서는 아래 주석을 푸시오.
+        # Uncomment to display text on image, 영상에 텍스트를 출력하기 위해서는 아래 주석을 푸시오
         # textsize = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, 0.7, 1)[0]
         # cv2.rectangle(frame, (xmin, ymin), (xmin + textsize[0], ymin -
         #               textsize[1]), (0, 255, 0), cv2.FILLED)
@@ -220,10 +220,12 @@ def main():
     이 폴더를 터미널에서 열어서 "./run.sh" 명령을 실행하세요.
     """
     args = build_argparser().parse_args()
+    # 주어진 입력방식(ex) 카메라, 동영상 파일)으로부터 영상 입력을 받아온다
+    # type(cap) == VideoCaptureWrapper
     cap = open_images_capture(args.input, args.loop)
-    frame_processor = FrameProcessor(args)
-    gesture_detector = GestureDetector(args.m_gd)
-    emotion_detector = EmotionDetector(args.m_ed)
+    frame_processor = FrameProcessor(args)  # 영상 프레임 처리기
+    gesture_detector = GestureDetector(args.m_gd)  # 손동작 인식 인식 모델
+    emotion_detector = EmotionDetector(args.m_ed)  # 얼굴 감정 인식 모델
 
     frame_num = 0
     metrics = PerformanceMetrics()
@@ -244,7 +246,7 @@ def main():
     m_flag = "DEFAULT"  # 기본값으로 얼굴 blurring 활성화
 
     while True:
-        frame = cap.read()
+        frame = cap.read()  # 영상 입력에서 하나의 프레임을 읽어온다
         if frame is None:
             if frame_num == 0:
                 raise ValueError("Can't read an image from the input")
@@ -270,14 +272,18 @@ def main():
         detections = frame_processor.process(frame)
         presenter.drawGraphs(frame)
 
-        g_flag = ""
-        b_value = -1
+        g_flag = ""  # g_flag == no hand gesture detected
+        b_value = -1  # b_value == no blurring degree detected in hand gesture
 
-        frame, img_roi = draw_detections(frame, frame_processor, detections,
-                                output_transform, m_flag, emotion_detector)
-        
-        if img_roi is not None:
-            g_flag, b_value = gesture_detector.detect_gesture(img_roi, seq, action_seq)
+        # 인식된 얼굴, 손동작, 얼굴 감정에 따라 얼굴에 영상처리를 한다
+        # 만약 등록된 사용자가 영상 속에 있다면 img_roi로 해당 사용자의 얼굴과 가슴 영역을 돌려준다
+        frame, img_roi = draw_detections(frame, frame_processor,
+                                         detections, output_transform,
+                                         m_flag, emotion_detector)
+
+        if img_roi is not None:  # 등록된 사용자가 인식되었다면 not None
+            g_flag, b_value = gesture_detector.detect_gesture(img_roi,
+                                                              seq, action_seq)
 
         if g_flag != "":  # g_flag == "" if no change
             m_flag = g_flag
@@ -292,7 +298,7 @@ def main():
         if not args.no_show:
             cv2.imshow('Face recognition demo', frame)
             key = cv2.waitKey(1)
-            if key in {ord('q'), ord('Q'), 27}:  # 'q' 키 또는 ESC를 누르면 종료
+            if key in {ord('q'), ord('Q'), 27}:  # 'q/Q' 키 또는 ESC를 누르면 종료
                 break
             presenter.handleKey(key)
 
@@ -301,5 +307,5 @@ def main():
         log.info(rep)
 
 
-if __name__ == '__main__':
+if __name__ == '__main__':  # 이 파일을 터미널에서 실행했을 때 실행된다
     sys.exit(main() or 0)
