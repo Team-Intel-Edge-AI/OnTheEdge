@@ -47,7 +47,7 @@ class PersonDetector:
         imgsz=(640, 640),  # inference size (height, width)
         conf_thres=0.7,  # confidence threshold
         hide_conf=False,  # hide confidences
-        device='',  # cuda device, i.e. 0 or 0,1,2,3 or cpu
+        device='cpu',  # cuda device, i.e. 0 or 0,1,2,3 or cpu
     ):
         """
         Run person detection using YOLOv5 model.
