@@ -1,20 +1,12 @@
+"""
+GUI-equipped application
+"""
+
 import sys
 import os
-import cv2
 import logging as log
-from argparse import ArgumentParser
 from pathlib import Path
 import numpy as np
-
-sys.path.append(str(Path(__file__).resolve().parents[0] / 'common/python'))
-sys.path.append(str(Path(__file__).resolve().parents[0]
-                    / 'common/python/openvino/model_zoo'))
-
-import monitors
-from helpers import resolution
-from images_capture import open_images_capture
-from model_api.models import OutputTransform
-from model_api.performance_metrics import PerformanceMetrics
 
 from face_identifier import FaceIdentifier
 from frame_processor import FrameProcessor
@@ -23,12 +15,22 @@ from emotion_detector import EmotionDetector
 from gesture_detector import GestureDetector
 from person_detector import PersonDetector
 
-from PySide6.QtCore import Qt, QThread, Signal, Slot, QCoreApplication
+from PySide6.QtCore import Qt, QThread, Signal, Slot
 from PySide6.QtGui import QImage, QPixmap
 from PySide6.QtWidgets import (QApplication, QFileDialog, QGroupBox,
                                QHBoxLayout, QLabel, QMainWindow, QPushButton,
                                QSizePolicy, QVBoxLayout, QWidget)
 
+import cv2
+
+sys.path.append(str(Path(__file__).resolve().parents[0] / 'common/python'))
+sys.path.append(str(Path(__file__).resolve().parents[0]
+                    / 'common/python/openvino/model_zoo'))
+
+import monitors
+from images_capture import open_images_capture
+from model_api.models import OutputTransform
+from model_api.performance_metrics import PerformanceMetrics
 
 log.basicConfig(format='[ %(levelname)s ] %(message)s',
                 level=log.DEBUG, stream=sys.stdout)
@@ -94,7 +96,11 @@ def center_crop(frame, crop_size):
                  (fw - crop_size[0]) // 2: (fw + crop_size[0]) // 2,
                  :]
 
+
 class Thread(QThread):
+    """
+    Thread class
+    """
     updateFrame = Signal(QImage)
 
     def __init__(self, parent=None):
@@ -103,14 +109,20 @@ class Thread(QThread):
         self.cap = True
 
     def run(self):
+        """
+        Start execution of thread
+        """
         args = None
 
         cap = open_images_capture("/dev/video0", False)
-        
+
         frame_processor = FrameProcessor(args)  # 영상 프레임 처리기
-        gesture_detector = GestureDetector("intel/models/model.h5")  # 손동작 인식 인식 모델
-        emotion_detector = EmotionDetector("intel/emotions-recognition-retail-0003/FP16/emotions-recognition-retail-0003.xml")  # 얼굴 감정 인식 모델
-        person_detector = PersonDetector("intel/models/ssdlite_mobilenet_v2_fp16.xml")  # 사람 인식 모델
+        gesture_detector = GestureDetector("intel/models/model.h5")
+        emotion_detector = EmotionDetector("intel/emotions-recognition-\
+                                           retail-0003/FP16/emotions-recognition\
+                                           -retail-0003.xml")  # 얼굴 감정 인식 모델
+        person_detector = PersonDetector("intel/models/ssdlite_mobilenet\
+                                         _v2_fp16.xml")  # 사람 인식 모델
 
         frame_num = 0
         metrics = PerformanceMetrics()
@@ -168,13 +180,15 @@ class Thread(QThread):
                 roi = frame[box[1]:y2, box[0]:x2]
 
                 # Bounding boxes around each person ROI
-                # cv2.rectangle(img=frame, pt1=box[:2], pt2=(x2, y2), color=(255,0,0), thickness=3)
+                # cv2.rectangle(img=frame, pt1=box[:2], pt2=(x2, y2),
+                #               color=(255, 0, 0), thickness=3)
 
                 detections = frame_processor.process(roi)
                 presenter.drawGraphs(roi)
                 # 인식된 얼굴, 손동작, 얼굴 감정에 따라 얼굴에 영상처리를 한다
                 # 만약 등록된 사용자가 영상 속에 있다면 img_roi로 해당 사용자의 얼굴과 가슴 영역을 돌려준다
-                g_flag, b_value = gesture_detector.detect_gesture(roi, seq, action_seq)
+                g_flag, b_value = gesture_detector.detect_gesture(roi, seq,
+                                                                  action_seq)
 
                 if g_flag != "":  # g_flag == "" if no change
                     m_flag = g_flag
@@ -199,11 +213,13 @@ class Thread(QThread):
             h, w, ch = color_frame.shape
             target_height = self.parent().label.height()
             target_width = int((target_height / h) * w)
-            resized_frame = cv2.resize(color_frame, (target_width, target_height))
+            resized_frame = cv2.resize(color_frame,
+                                       (target_width, target_height))
 
             # Creating QImage
             h, w, ch = resized_frame.shape
-            img = QImage(resized_frame.data, w, h, ch * w, QImage.Format_RGB888)
+            img = QImage(resized_frame.data, w, h,
+                         ch * w, QImage.Format_RGB888)
 
             # Emit signal
             self.updateFrame.emit(img)
@@ -212,13 +228,19 @@ class Thread(QThread):
         for rep in presenter.reportMeans():
             log.info(rep)
 
-
     def stop(self):
+        """
+        Stop thread
+        """
         self.status = True
         # 이 상태를 False로 바꾸면 stop 버튼을 눌렀을 때 바로 창이 꺼진다.
         self.wait()
 
+
 class Window(QMainWindow):
+    """
+    Window class
+    """
     def __init__(self):
         super().__init__()
 
@@ -234,7 +256,7 @@ class Window(QMainWindow):
         self.thread.updateFrame.connect(self.setImage)
         
         self.btn_select = QPushButton("Select Face")
-        self.btn_start = QPushButton("Streaming") 
+        self.btn_start = QPushButton("Streaming")
         self.btn_stop = QPushButton("Stop")
         self.btn_save = QPushButton("Save")
         self.btn_stop.setEnabled(False)
@@ -277,11 +299,12 @@ class Window(QMainWindow):
             self.saveImages(file_paths)
 
     def saveImages(self, file_paths):
-        output_folder = "./"  
+        output_folder = "./"
         os.makedirs(output_folder, exist_ok=True)
         for file_path in file_paths:
             img = cv2.imread(file_path)
-            output_path = os.path.join(output_folder, os.path.basename(file_path))
+            output_path = os.path.join(output_folder,
+                                       os.path.basename(file_path))
             cv2.imwrite(output_path, img)
             print(f"Image saved to {output_path}")
 
@@ -297,16 +320,19 @@ class Window(QMainWindow):
 
     def saveVideo(self):
         file_dialog = QFileDialog()
-        file_path, _ = file_dialog.getSaveFileName(self, "Saving Video", "", "Video Files (*.avi *.mp4)")
-        
+        file_path, _ = file_dialog.getSaveFileName(self, "Saving Video", "",
+                                                   "Video Files (*.avi *.mp4)")
+
         if file_path:
             # VideoWriter 초기화
-            fourcc = cv2.VideoWriter_fourcc(*'XVID')  # 코덱 설정 (XVID는 AVI 포맷을 지원)
+            fourcc = cv2.VideoWriter_fourcc(*'XVID')  # 코덱 설정 (XVID는 AVI 포맷 지원)
             fps = 30.0  # 초당 프레임 수
-            video_writer = cv2.VideoWriter(file_path, fourcc, fps, (640, 480))  # 파일명, 코덱, FPS, 해상도 설정
+            # cv2.VideoWriter의 매개변수: 파일명, 코덱, FPS, 해상도 설정
+            video_writer = cv2.VideoWriter(file_path, fourcc, fps, (640, 480))
 
             # 비디오 저장 로직
-            self.thread.cap.set(cv2.CAP_PROP_POS_FRAMES, 0)  # 캡처된 프레임을 처음으로 초기화
+            # 캡처된 프레임을 처음으로 초기화
+            self.thread.cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
             while True:
                 ret, frame = self.thread.cap.read()
                 if not ret:
@@ -320,10 +346,10 @@ class Window(QMainWindow):
 
             print(f"Video Saved to {file_path}")
 
+
 if __name__ == "__main__":
     app = QApplication()
     window = Window()
     window.show()
     # window.showFullScreen()  # Show in full screen
     sys.exit(app.exec())
-
