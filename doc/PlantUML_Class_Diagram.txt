@@ -2,46 +2,109 @@
 title Project: Face Privacy
 
 class Edge_Device {
-    input: InputStream
-    output: OutputStream
-    process(input)
-    display(output)
+    draw_detections()
+    center_crop()
 }
 
-class Controller {
-    input: InputStream
-    output: OutputStream
-    common_model: CommonModel
-    person_model: PersonRecognitionModel
-    face_model: FaceRecognitionModel
-    gesture_model: GestureRecognitionModel
-    emotion_model: EmotionRecognitionModel
-    ask_model(input, output, model)
-    ask_emotion_model(output)
-    display_images(output)
+class Thread {
+    run()
+    stop()
 }
 
-interface CommonModel {
-    process(input, output, command)
+class Window {
+    selectFace()
+    saveImages()
+    startVideo()
+    stopVideo()
+    saveVideo()
 }
 
-class FaceRecognitionModel {
-    process(input, output, command)
+class PersonDetector {
+    process_results()
+    detect_people()
 }
 
-class GestureRecognitionModel {
-    process(input, output, command)
+class FrameProcessor {
+    process()
 }
 
-class EmotionRecognitionModel {
-    process(input, output, command)
+class GestureDetector {
+    detect_gesture()
+    switch_case()
+    joint_compute()
 }
 
-CommonModel <|-- PersonRecognitionModel
-CommonModel <|-- FaceRecognitionModel
-CommonModel <|-- GestureRecognitionModel
-CommonModel <|-- EmotionRecognitionModel
-Controller *-- CommonModel: > Contains
-Edge_Device -- Controller: Passes data
+class LandmarksDetector {
+    preprocess()
+    enqueue()
+    start_async()
+    postprocess()
+}
+
+class FacesDatabase {
+    ask_to_save()
+    match_faces()
+    create_new_label()
+    check_if_face_exist()
+    check_if_label_exists()
+    dump_faces()
+    add_item()
+}
+
+class FaceIdentifier {
+    set_faces_database()
+    get_identity_label()
+    preprocess()
+    enqueue()
+    start_async()
+    get_threshold()
+    postprocess()
+    get_descriptors()
+    normalize()
+    get_transform()
+    _align_rois()
+}
+
+class FaceDetector {
+    preprocess()
+    start_async()
+    enqueue()
+    postprocess()
+}
+
+class FaceDrawer {
+    draw_face()
+    overlay_transparent()
+}
+
+class EmotionDetector {
+    detect_emotion()
+    switch_case()
+}
+
+class ie_module {
+    deploy()
+    completion_callback()
+    enqueue()
+    wait()
+    get_outputs()
+    clear()
+    infer()
+}
+
+Edge_Device *-- Thread: > Contains
+Edge_Device *-- Window: > Contains
+Thread *-- FrameProcessor: > Contains
+Thread *-- PersonDetector: > Contains
+Thread *-- GestureDetector: > Contains
+Thread *-- EmotionDetector: > Contains
+Thread *-- FaceDrawer: > Contains
+FrameProcessor *-- FaceDetector: > Contains
+FrameProcessor *-- LandmarksDetector: > Contains
+FrameProcessor *-- FacesDatabase: > Contains
+FrameProcessor *-- FaceIdentifier: > Contains
+ie_module <|-- FaceDetector
+ie_module <|-- FaceIdentifier
+ie_module <|-- LandmarksDetector
 
 @enduml
