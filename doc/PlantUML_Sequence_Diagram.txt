@@ -3,7 +3,7 @@ title Project: Face Privacy
 
 actor Person as per
 boundary Edge_Device as edge
-control Control as ctrl
+control Application as ctrl
 participant Person_Detection_Model as person
 participant Face_Recognition_Model as face
 participant Gesture_Recognition_Model as gesture
@@ -12,50 +12,55 @@ participant Emotion_Recognition_Model as emotion
 skinparam sequenceMessageAlign center
 
 per -> edge: Use device
-edge -> ctrl: Send video feed
 
-group Remote server
+group Select Face
 |||
+edge -> ctrl: Select face
+ctrl -> edge: Save face in database
+|||
+end
+
+group Start streaming
+|||
+edge -> ctrl: Streaming
 ctrl -> person: Process person detection
 person -> person: Detect persons in image
-person -> ctrl: Return processed video feed
-par Facial Recognition
-    loop For each detected person
-        ctrl -> face: Process facial recognition
-        face -> face: Check for face
-        alt Face recognized
-            face -> face: Remove blur
-        else Face unknown
-            face -> face: Blur as default
-        end
-        face -> ctrl: Return processed video feed
-    end
-else Gesture/Emotion Recognition
-    loop For each detected person
-        ctrl -> gesture: Process gesture recognition
-        gesture -> gesture: Check for hand gesture
-        alt Gesture unknown (no change)
-            gesture -> ctrl: Return processed video feed
-        else Gesture recognized (unblur)
-            gesture -> face: Request blur removal
-            face -> face: Remove blur
-            face -> ctrl: Return processed video feed
-        else Gesture recognized (emotional emoji)
-            gesture -> emotion: Request emotion recognition
-            emotion -> emotion: Check for facial emotion
-            alt Emotion recognized
-                emotion -> emotion: Use emotional emoji
-            else Emotion unknown
-                emotion -> emotion: Use default emoji
-            end
-            emotion -> ctrl: Return processed video feed
+person -> ctrl: Return person ROIs
+loop For each detected person
+    ctrl -> face: Process facial recognition
+    face -> face: Check for face
+    face -> ctrl: Return facial processing results
+    ctrl -> gesture: Process gesture recognition
+    gesture -> gesture: Check for hand gesture
+    gesture -> ctrl: Return gesture processing results
+    alt Registered face
+        ctrl -> ctrl: Remove blur
+    else Face unknown
+        alt Gesture recognized (unblur)
+            ctrl -> ctrl: Remove blur
+        else Gesture recognized (emoticon)
+            ctrl -> ctrl: Process emoticon
         end
     end
 end
+ctrl -> edge: Return video frame
+edge -> per: Show processed video
 |||
 end
 
-ctrl -> edge: Return video feed
-edge -> per: Show processed video
+group Stop streaming
+|||
+edge -> ctrl: Stop
+ctrl -> ctrl: Stop processing
+ctrl -> edge: Terminate application
+|||
+end
+
+group Save video
+|||
+edge -> ctrl: Save
+ctrl -> edge: Save image locally
+|||
+end
 
 @enduml
