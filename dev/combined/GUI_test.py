@@ -1,11 +1,98 @@
 import sys
 import os
 import cv2
+import logging as log
+from argparse import ArgumentParser
+from pathlib import Path
+import numpy as np
+
+sys.path.append(str(Path(__file__).resolve().parents[0] / 'common/python'))
+sys.path.append(str(Path(__file__).resolve().parents[0]
+                    / 'common/python/openvino/model_zoo'))
+
+import monitors
+from helpers import resolution
+from images_capture import open_images_capture
+from model_api.models import OutputTransform
+from model_api.performance_metrics import PerformanceMetrics
+
+from face_identifier import FaceIdentifier
+from frame_processor import FrameProcessor
+from face_drawer import FaceDrawer
+from emotion_detector import EmotionDetector
+from gesture_detector import GestureDetector
+from person_detector import PersonDetector
+
 from PySide6.QtCore import Qt, QThread, Signal, Slot, QCoreApplication
 from PySide6.QtGui import QImage, QPixmap
 from PySide6.QtWidgets import (QApplication, QFileDialog, QGroupBox,
                                QHBoxLayout, QLabel, QMainWindow, QPushButton,
                                QSizePolicy, QVBoxLayout, QWidget)
+
+
+log.basicConfig(format='[ %(levelname)s ] %(message)s',
+                level=log.DEBUG, stream=sys.stdout)
+
+DEVICE_KINDS = ['CPU', 'GPU', 'HETERO']
+
+
+def draw_detections(frame, frame_processor, detections,
+                    output_transform, blur_mode, emotion_detector):
+    """
+    Draw detections.
+    """
+    size = frame.shape[:2]
+    frame = output_transform.resize(frame)
+
+    for roi, landmarks, identity in zip(*detections):
+        text = frame_processor.face_identifier.get_identity_label(identity.id)
+        if identity.id != FaceIdentifier.UNKNOWN_ID:
+            text += ' %.2f%%' % (100.0 * (1 - identity.distance))
+
+        xmin = max(int(roi.position[0]), 0)
+        ymin = max(int(roi.position[1]), 0)
+        xmax = min(int(roi.position[0] + roi.size[0]), size[1])
+        ymax = min(int(roi.position[1] + roi.size[1]), size[0])
+        xmin, ymin, xmax, ymax = output_transform.scale([xmin, ymin,
+                                                         xmax, ymax])
+
+        face_block = frame[ymin:ymax, xmin:xmax]
+
+        if identity.id == FaceIdentifier.UNKNOWN_ID:
+            if blur_mode == "DEFAULT":
+                # 기본값으로 얼굴 영역을 가려버린다
+                frame[ymin:ymax, xmin:xmax] = cv2.GaussianBlur(
+                    face_block, (51, 51), FrameProcessor.blur_value)
+            elif blur_mode == "CHANGE":
+                # 감정 이미지를 얼굴 영역의 높이에 맞추어 크기를 조절한다
+                emotion = emotion_detector.detect_emotion(face_block)
+                bgr_image = cv2.imread(emotion, cv2.IMREAD_UNCHANGED)
+                emotion_image = cv2.cvtColor(bgr_image, cv2.COLOR_BGR2BGRA)
+                frame = FaceDrawer.draw_face(frame, xmin, ymin, xmax, ymax,
+                                             text, landmarks, output_transform,
+                                             emotion_image)
+            else:  # if blur_mode == "NONE"
+                pass
+
+        # Uncomment to display text on image, 영상에 텍스트를 출력하기 위해서는 아래 주석을 푸시오
+        # textsize = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, 0.7, 1)[0]
+        # cv2.rectangle(frame, (xmin, ymin), (xmin + textsize[0], ymin -
+        #               textsize[1]), (0, 255, 0), cv2.FILLED)
+        # cv2.putText(frame, text, (xmin, ymin), cv2.FONT_HERSHEY_SIMPLEX,
+        #             0.7, (0, 0, 0), 1)
+
+    return frame
+
+
+def center_crop(frame, crop_size):
+    """
+    Center crop.
+    """
+    fh, fw, _ = frame.shape
+    crop_size[0], crop_size[1] = min(fw, crop_size[0]), min(fh, crop_size[1])
+    return frame[(fh - crop_size[1]) // 2: (fh + crop_size[1]) // 2,
+                 (fw - crop_size[0]) // 2: (fw + crop_size[0]) // 2,
+                 :]
 
 class Thread(QThread):
     updateFrame = Signal(QImage)
@@ -16,11 +103,94 @@ class Thread(QThread):
         self.cap = True
 
     def run(self):
-        self.cap = cv2.VideoCapture(0)
+        args = None
+
+        cap = open_images_capture("/dev/video0", False)
+        
+        frame_processor = FrameProcessor(args)  # 영상 프레임 처리기
+        gesture_detector = GestureDetector("intel/models/model.h5")  # 손동작 인식 인식 모델
+        emotion_detector = EmotionDetector("intel/emotions-recognition-retail-0003/FP16/emotions-recognition-retail-0003.xml")  # 얼굴 감정 인식 모델
+        person_detector = PersonDetector("intel/models/ssdlite_mobilenet_v2_fp16.xml")  # 사람 인식 모델
+
+        frame_num = 0
+        metrics = PerformanceMetrics()
+        presenter = None
+        output_transform = None
+        input_crop = None
+
+        crop_size = (0, 0)
+        if crop_size[0] > 0 and crop_size[1] > 0:
+            input_crop = np.array(crop_size)
+        elif not (crop_size[0] == 0 and crop_size[1] == 0):
+            raise ValueError('Both crop height and width should be positive')
+        video_writer = cv2.VideoWriter()
+
+        seq = []
+        action_seq = []
+
+        output_resolution = None
+        utilization_monitors = ''
+        output = None
+        output_limit = 1000
+
+        # *** 손동작 인식으로 값이 변하는 제어 변수 ***
+        m_flag = "DEFAULT"  # 기본값으로 얼굴 blurring 활성화
+
         while self.status:
-            ret, frame = self.cap.read()
-            if not ret:
-                continue
+            frame = cap.read()  # 영상 입력에서 하나의 프레임을 읽어온다
+            if frame is None:
+                if frame_num == 0:
+                    raise ValueError("Can't read an image from the input")
+                break
+            if input_crop is not None:
+                frame = center_crop(frame, input_crop)
+            if frame_num == 0:
+                output_transform = \
+                    OutputTransform(frame.shape[:2], output_resolution)
+                if output_resolution:
+                    output_resolution = output_transform.new_resolution
+                else:
+                    output_resolution = (frame.shape[1], frame.shape[0])
+                presenter = \
+                    monitors.Presenter(utilization_monitors, 55,
+                                    (round(output_resolution[0] / 4),
+                                        round(output_resolution[1] / 8)))
+                if output and not video_writer.open(
+                    output, cv2.VideoWriter_fourcc(*'MJPG'),
+                        cap.fps(), output_resolution):
+                    raise RuntimeError("Can't open video writer")
+
+            boxes = person_detector.detect_people(frame)  # boxes is list
+
+            for label, score, box in boxes:
+                x2 = box[0] + box[2]
+                y2 = box[1] + box[3]
+                roi = frame[box[1]:y2, box[0]:x2]
+
+                # Bounding boxes around each person ROI
+                # cv2.rectangle(img=frame, pt1=box[:2], pt2=(x2, y2), color=(255,0,0), thickness=3)
+
+                detections = frame_processor.process(roi)
+                presenter.drawGraphs(roi)
+                # 인식된 얼굴, 손동작, 얼굴 감정에 따라 얼굴에 영상처리를 한다
+                # 만약 등록된 사용자가 영상 속에 있다면 img_roi로 해당 사용자의 얼굴과 가슴 영역을 돌려준다
+                g_flag, b_value = gesture_detector.detect_gesture(roi, seq, action_seq)
+
+                if g_flag != "":  # g_flag == "" if no change
+                    m_flag = g_flag
+                if b_value != -1:  # b_value == -1 if no change
+                    FrameProcessor.blur_value = b_value
+
+                roi = draw_detections(roi, frame_processor,
+                                      detections, output_transform,
+                                      m_flag, emotion_detector)
+
+                frame[box[1]:y2, box[0]:x2] = roi
+
+            frame_num += 1
+            if video_writer.isOpened() and (output_limit <= 0 or
+                                            frame_num <= output_limit):
+                video_writer.write(frame)
 
             # Reading the image in RGB to display it
             color_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -37,6 +207,11 @@ class Thread(QThread):
 
             # Emit signal
             self.updateFrame.emit(img)
+
+        metrics.log_total()
+        for rep in presenter.reportMeans():
+            log.info(rep)
+
 
     def stop(self):
         self.status = True
