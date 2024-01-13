@@ -273,6 +273,10 @@ def main():
             x2 = box[0] + box[2]
             y2 = box[1] + box[3]
             roi = frame[box[0]:x2, box[1]:y2]
+
+            # Bounding boxes around each person ROI
+            # cv2.rectangle(img=frame, pt1=box[:2], pt2=(x2, y2), color=(255,0,0), thickness=3)
+
             detections = frame_processor.process(roi)
             presenter.drawGraphs(roi)
             # 인식된 얼굴, 손동작, 얼굴 감정에 따라 얼굴에 영상처리를 한다
