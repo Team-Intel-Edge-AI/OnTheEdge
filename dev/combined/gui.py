@@ -180,8 +180,8 @@ class Thread(QThread):
                 roi = frame[box[1]:y2, box[0]:x2]
 
                 # Bounding boxes around each person ROI
-                # cv2.rectangle(img=frame, pt1=box[:2], pt2=(x2, y2),
-                #               color=(255, 0, 0), thickness=3)
+                cv2.rectangle(img=frame, pt1=box[:2], pt2=(x2, y2),
+                              color=(255, 0, 0), thickness=3)
 
                 detections = frame_processor.process(roi)
                 presenter.drawGraphs(roi)

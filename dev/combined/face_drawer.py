@@ -16,19 +16,19 @@ class FaceDrawer:
         Draw emoticons over a detected human face.
         인식한 얼굴 위에 이모티콘 이미지를 붙인다.
         """
-        cv2.rectangle(frame, (xmin, ymin), (xmax, ymax), (0, 220, 0), 2)
+        # cv2.rectangle(frame, (xmin, ymin), (xmax, ymax), (0, 220, 0), 2)
 
         for point in landmarks:
             x = xmin + output_transform.scale((xmax - xmin) * point[0])
             y = ymin + output_transform.scale((ymax - ymin) * point[1])
             cv2.circle(frame, (int(x), int(y)), 1, (0, 255, 255), 2)
 
-        textsize = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, 0.7, 1)[0]
-        cv2.rectangle(frame, (xmin, ymin),
-                      (xmin + textsize[0], ymin - textsize[1]),
-                      (255, 255, 255), cv2.FILLED)
-        cv2.putText(frame, text, (xmin, ymin),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 0), 1)
+        # textsize = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, 0.7, 1)[0]
+        # cv2.rectangle(frame, (xmin, ymin),
+        #               (xmin + textsize[0], ymin - textsize[1]),
+        #               (255, 255, 255), cv2.FILLED)
+        # cv2.putText(frame, text, (xmin, ymin),
+        #             cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 0), 1)
 
         # 감정 이미지를 얼굴 영역의 높이에 맞추어 크기 조절
         emotion_image_resized = cv2.resize(emotion_image,
