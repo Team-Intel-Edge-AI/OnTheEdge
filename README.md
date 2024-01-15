@@ -31,6 +31,7 @@
   3. 영상 속 인물이 팔을 들어 주먹을 쥐면 블러처리 실행
   4. (추가기능) 검지 손가락만 들면 블러처리 된 영역에 이모티콘 형상을 구현
 <br><br>
+
 ### 발명의 효과
 본 발명의 영상 모자이크 처리 방법 및 이를 위한 장치에 의하면, 영상을 생성한 영상생성장치가 생성된 영상을 특정 서비스를 통해 게시하여 배포하고자 할 경우, 영상에서 특정 영역만을 모자이크 처리하여 업로드할 수 있어 사용자가 직접 영역 하나하나를 지정하여 모자이크를 처리할 필요가 없어 사용자의 편의성이 높아질 수 있다.<br>
 또한, 본 발명에 의하면 특정 서비스를 통해 게시된 영상을 재생하고자 하는 사용자에 따라 선별적으로 모자이크를 해제하여 배포함으로써, SNS 서비스 플랫폼을 통해 무분별한 개인 영상 정보가 유포되는 것을 사전에 방지할 수 있게 된다.<br>
@@ -43,28 +44,28 @@
 
 ## Use Case
 
-![HLD](https://github.com/Team-Intel-Edge-AI/OnTheEdge/blob/main/doc/UseCase_0.png) 
+![UseCaseDiagram](https://github.com/Team-Intel-Edge-AI/OnTheEdge/blob/main/doc/UseCase_0.png) 
 
 
 ## Class Diagram
 
-![HLD](https://github.com/Team-Intel-Edge-AI/OnTheEdge/blob/main/doc/PlantUML_Class_Diagram.png)
+![ClassDiagram](https://github.com/Team-Intel-Edge-AI/OnTheEdge/blob/main/doc/PlantUML_Class_Diagram.png)
 
 
 ## Sequence Diagram
 
-![HLD](https://github.com/Team-Intel-Edge-AI/OnTheEdge/blob/main/doc/PlantUML_Sequence_Diagram.png)
+![SequenceDiagram](https://github.com/Team-Intel-Edge-AI/OnTheEdge/blob/main/doc/PlantUML_Sequence_Diagram.png)
 
 
-## Clone code
-
-* (각 팀에서 프로젝트를 위해 생성한 repository에 대한 code clone 방법에 대해서 기술)
+## Cloning the code
 
 ```shell
-git clone https://github.com/xxx/yyy/zzz
+https://github.com/Team-Intel-Edge-AI/OnTheEdge.git  # HTTPS
+# git@github.com:Team-Intel-Edge-AI/OnTheEdge.git  # SSH
+# gh repo clone Team-Intel-Edge-AI/OnTheEdge  # GitHub CLI
 ```
 
-## Prerequisite
+## Prerequisites
 
 * The following code assumes Python 3.10 is installed on the computer. Please install Python 3.10 if not already installed.
 * 이하 코드는 컴퓨터에 파이썬 3.10버전이 설치되어있다고 가정합니다. 만약 파이썬을 설치하시지 않으셨다면 파이썬 3.10버전을 먼저 설치해주세요.
@@ -82,20 +83,11 @@ sudo apt install libxcb-cursor0
 
 ## Steps to build
 
-* (프로젝트를 실행을 위해 빌드 절차 기술)
+* This code does not require building and can be run immediately after creating a Python virtual environment and installing the required libraries.
+* 해당 코드는 별도로 빌드할 필요가 없으며 저장소 클로닝 후 가상환경 생성, 필요한 라이브러리 설치 후 바로 실행하면된다.
 
-```shell
-cd ~/xxxx
-source .venv/bin/activate
-
-make
-make install
-```
 
 ## Steps to run
-
-* (프로젝트 실행방법에 대해서 기술, 특별한 사용방법이 있다면 같이 기술)
-
 ```shell
 # Activate prepared Python virtual environment
 # ex) source .edge_env/bin/activate
@@ -109,10 +101,7 @@ python3 gui.py  # For Linux
 ```
 
 ## Output
-
-* (프로젝트 실행 화면 캡쳐)
-
-![./result.png](./doc/result.png)
+![Result_output](./doc/result.png)
 
 ## Appendix
 
