@@ -22,34 +22,68 @@ class FrameProcessor:
     blur_value = 20
 
     def __init__(self, args):
-        self.allow_grow = args.allow_grow and not args.no_show
+        if args is None:
+            allow_grow = True
+            no_show = True
+            run_detector = True
 
-        log.info('OpenVINO Runtime')
-        log.info('\tbuild: %s', get_version())
-        core = Core()
+            self.allow_grow = allow_grow and not no_show
 
-        self.face_detector = FaceDetector(core, args.m_fd,
-                                          args.fd_input_size,
-                                          confidence_threshold=args.t_fd,
-                                          roi_scale_factor=args.exp_r_fd)
-        self.landmarks_detector = LandmarksDetector(core, args.m_lm)
-        self.face_identifier = FaceIdentifier(core, args.m_reid,
-                                              match_threshold=args.t_id,
-                                              match_algo=args.match_algo)
+            log.info('OpenVINO Runtime')
+            log.info('\tbuild: %s', get_version())
+            core = Core()
 
-        self.face_detector.deploy(args.d_fd)
-        self.landmarks_detector.deploy(args.d_lm, self.QUEUE_SIZE)
-        self.face_identifier.deploy(args.d_reid, self.QUEUE_SIZE)
+            self.face_detector = FaceDetector(core, "intel/face-detection-retail-0004/FP16/face-detection-retail-0004.xml",
+                                            (0, 0),
+                                            confidence_threshold=0.6,
+                                            roi_scale_factor=1.15)
+            self.landmarks_detector = LandmarksDetector(core, "intel/landmarks-regression-retail-0009/FP16/landmarks-regression-retail-0009.xml")
+            self.face_identifier = FaceIdentifier(core, "intel/face-reidentification-retail-0095/FP16/face-reidentification-retail-0095.xml",
+                                                match_threshold=0.3,
+                                                match_algo='HUNGARIAN')
 
-        log.debug('Building faces database using images from %s', args.fg)
-        self.faces_database = FacesDatabase(args.fg, self.face_identifier,
-                                            self.landmarks_detector,
-                                            self.face_detector
-                                            if args.run_detector
-                                            else None, args.no_show)
-        self.face_identifier.set_faces_database(self.faces_database)
-        log.info('Database is built, registered %s identities',
-                 len(self.faces_database))
+            self.face_detector.deploy('CPU')
+            self.landmarks_detector.deploy('CPU', self.QUEUE_SIZE)
+            self.face_identifier.deploy('CPU', self.QUEUE_SIZE)
+
+            log.debug('Building faces database using images from %s', '')
+            self.faces_database = FacesDatabase('', self.face_identifier,
+                                                self.landmarks_detector,
+                                                self.face_detector
+                                                if run_detector
+                                                else None, no_show)
+            self.face_identifier.set_faces_database(self.faces_database)
+            log.info('Database is built, registered %s identities',
+                    len(self.faces_database))
+        else:
+            self.allow_grow = args.allow_grow and not args.no_show
+
+            log.info('OpenVINO Runtime')
+            log.info('\tbuild: %s', get_version())
+            core = Core()
+
+            self.face_detector = FaceDetector(core, args.m_fd,
+                                            args.fd_input_size,
+                                            confidence_threshold=args.t_fd,
+                                            roi_scale_factor=args.exp_r_fd)
+            self.landmarks_detector = LandmarksDetector(core, args.m_lm)
+            self.face_identifier = FaceIdentifier(core, args.m_reid,
+                                                match_threshold=args.t_id,
+                                                match_algo=args.match_algo)
+
+            self.face_detector.deploy(args.d_fd)
+            self.landmarks_detector.deploy(args.d_lm, self.QUEUE_SIZE)
+            self.face_identifier.deploy(args.d_reid, self.QUEUE_SIZE)
+
+            log.debug('Building faces database using images from %s', args.fg)
+            self.faces_database = FacesDatabase(args.fg, self.face_identifier,
+                                                self.landmarks_detector,
+                                                self.face_detector
+                                                if args.run_detector
+                                                else None, args.no_show)
+            self.face_identifier.set_faces_database(self.faces_database)
+            log.info('Database is built, registered %s identities',
+                    len(self.faces_database))
 
     def process(self, frame):
         """

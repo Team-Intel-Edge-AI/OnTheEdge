@@ -74,7 +74,7 @@ https://github.com/Team-Intel-Edge-AI/OnTheEdge.git  # HTTPS
 python -m venv .edge_env
 source .edge_env/bin/activate
 pip install --upgrade pip
-pip install openvino==2023.2.0, opencv-python, numpy, scipy, mediapipe, PySide6
+pip install openvino==2023.2.0 opencv-python numpy scipy mediapipe tensorflow PySide6
 sudo apt-get update
 sudo apt-get install -y qt5-default libxcb-xinerama0-dev
 sudo apt install libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-render-util0
