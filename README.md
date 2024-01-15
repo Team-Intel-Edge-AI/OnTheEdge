@@ -73,7 +73,11 @@ git clone https://github.com/xxx/yyy/zzz
 python -m venv .edge_env
 source .edge_env/bin/activate
 pip install --upgrade pip
-pip install openvino==2023.2.0, opencv-python, numpy, scipy, mediapipe
+pip install openvino==2023.2.0, opencv-python, numpy, scipy, mediapipe, PySide6
+sudo apt-get update
+sudo apt-get install -y qt5-default libxcb-xinerama0-dev
+sudo apt install libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-render-util0
+sudo apt install libxcb-cursor0
 ```
 
 ## Steps to build
@@ -97,20 +101,18 @@ make install
 # ex) source .edge_env/bin/activate
 
 # Navigate to this cloned repo
-cd ~/<repo>/dev
+cd ~/<repo>/dev/combined
 
-
-cd /path/to/repo/xxx/
-python demo.py -i xxx -m yyy -d zzz
-
-ls -ltrh /dev/video* # Linux Ubuntu, 카메라 번호를 확인하여 실행한다
+# Execute following to run
+python3 gui.py  # For Linux
+# python gui.py  # For Windows
 ```
 
 ## Output
 
 * (프로젝트 실행 화면 캡쳐)
 
-![./result.jpg](./result.jpg)
+![./result.png](./doc/result.png)
 
 ## Appendix
 
