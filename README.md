@@ -43,7 +43,7 @@
 
 ## Use Case
 
-![HLD](https://github.com/Team-Intel-Edge-AI/OnTheEdge/blob/main/doc/UseCase.png)
+![HLD](https://github.com/Team-Intel-Edge-AI/OnTheEdge/blob/juhee/UseCase.png) 
 
 
 ## Class Diagram
