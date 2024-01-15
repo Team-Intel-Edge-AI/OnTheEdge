@@ -8,13 +8,6 @@ import logging as log
 from pathlib import Path
 import numpy as np
 
-from face_identifier import FaceIdentifier
-from frame_processor import FrameProcessor
-from face_drawer import FaceDrawer
-from emotion_detector import EmotionDetector
-from gesture_detector import GestureDetector
-from person_detector import PersonDetector
-
 from PySide6.QtCore import Qt, QThread, Signal, Slot
 from PySide6.QtGui import QImage, QPixmap
 from PySide6.QtWidgets import (QApplication, QFileDialog, QGroupBox,
@@ -26,6 +19,13 @@ import cv2
 sys.path.append(str(Path(__file__).resolve().parents[0] / 'common/python'))
 sys.path.append(str(Path(__file__).resolve().parents[0]
                     / 'common/python/openvino/model_zoo'))
+
+from face_identifier import FaceIdentifier
+from frame_processor import FrameProcessor
+from face_drawer import FaceDrawer
+from emotion_detector import EmotionDetector
+from gesture_detector import GestureDetector
+from person_detector import PersonDetector
 
 import monitors
 from images_capture import open_images_capture
@@ -115,14 +115,14 @@ class Thread(QThread):
         args = None
 
         cap = open_images_capture("/dev/video0", False)
+        # Just "0" for Windows integrated webcam
+        # 만약 리눅스에서 'Cannot find '/dev/video0' 문제가 발생한다면 카메라 번호를 확인 후 실행한다.
+        # ls -ltrh /dev/video*  # << 왼쪽 코드를 터미널에서 실행하여 카메라 번호를 확인한다.
 
-        frame_processor = FrameProcessor(args)  # 영상 프레임 처리기
-        gesture_detector = GestureDetector("intel/models/model.h5")
-        emotion_detector = EmotionDetector("intel/emotions-recognition-\
-                                           retail-0003/FP16/emotions-recognition\
-                                           -retail-0003.xml")  # 얼굴 감정 인식 모델
-        person_detector = PersonDetector("intel/models/ssdlite_mobilenet\
-                                         _v2_fp16.xml")  # 사람 인식 모델
+        frame_processor = FrameProcessor(args)  # 영상 프레임 처리기 (얼굴 인식 내장)
+        gesture_detector = GestureDetector("intel/models/model.h5")  # 손동작 인식
+        emotion_detector = EmotionDetector("intel/emotions-recognition-retail-0003/FP16/emotions-recognition-retail-0003.xml")  # 얼굴 감정 인식
+        person_detector = PersonDetector("intel/models/ssdlite_mobilenet_v2_fp16.xml")  # 사람 인식
 
         frame_num = 0
         metrics = PerformanceMetrics()
